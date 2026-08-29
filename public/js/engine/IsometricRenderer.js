@@ -170,8 +170,10 @@ class IsometricRenderer {
       this.assets.drawFloatingArcology(ctx, screenPos.x, floatingScreenY, arcology, ownerColor);
     }
 
-    // 3. Render Flying Transit Sky Lanes & Autonomous Flying Vehicles (Page 2)
-    this.renderFlyingTransit(ctx, gameState);
+    // 3. Render Flying Transit Sky Lanes ONLY when Antigravity Overlay is active
+    if (this.overlayMode === 'ANTIGRAVITY') {
+      this.renderFlyingTransit(ctx, gameState);
+    }
 
     ctx.restore();
   }
@@ -226,7 +228,7 @@ class IsometricRenderer {
     } else if (this.overlayMode === 'DISTRICTS') {
       const colors = ['#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b', '#64748b', '#10b981', '#06b6d4', '#0284c7', '#a855f7', '#ec4899'];
       const col = colors[(tile.districtId - 1) % colors.length];
-      ctx.fillStyle = col + '44'; // 25% opacity
+      ctx.fillStyle = col + '44';
       ctx.fill();
     } else if (this.overlayMode === 'ANTIGRAVITY') {
       if (tile.floatingBuilding) {
@@ -241,34 +243,30 @@ class IsometricRenderer {
   }
 
   renderFlyingTransit(ctx, gameState) {
+    // Only render clean glowing energy conduits connecting floating arcologies
     ctx.save();
-    for (const v of this.skyVehicles) {
-      v.t += v.speed * 0.15;
-      if (v.t >= 1.0) {
-        v.t = 0;
-        v.startX = v.targetX;
-        v.startY = v.targetY;
-        v.targetX = Math.random() * gameState.gridSize;
-        v.targetY = Math.random() * gameState.gridSize;
+    const arcologies = [];
+    const size = gameState.gridSize || 60;
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        const t = gameState.grid && gameState.grid[x] && gameState.grid[x][y];
+        if (t && t.floatingBuilding) {
+          arcologies.push({ x, y, pos: this.gridToScreen(x, y, 64) });
+        }
       }
+    }
 
-      const curGridX = v.startX + (v.targetX - v.startX) * v.t;
-      const curGridY = v.startY + (v.targetY - v.startY) * v.t;
-      const pos = this.gridToScreen(curGridX, curGridY, v.z_offset);
-
-      // Draw futuristic flying sky-capsule
-      ctx.fillStyle = '#38bdf8';
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Ion thruster trail
+    if (arcologies.length > 1) {
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      ctx.lineTo(pos.x - (v.targetX - v.startX) * 0.8, pos.y - (v.targetY - v.startY) * 0.4);
+      for (let i = 0; i < arcologies.length - 1; i++) {
+        ctx.moveTo(arcologies[i].pos.x, arcologies[i].pos.y);
+        ctx.lineTo(arcologies[i + 1].pos.x, arcologies[i + 1].pos.y);
+      }
       ctx.stroke();
+      ctx.setLineDash([]);
     }
     ctx.restore();
   }

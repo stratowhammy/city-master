@@ -13,7 +13,9 @@ class TutorialSystem {
     this.steps = [
       {
         id: 'WELCOME',
-        speaker: 'Sal "Wrench" Sullivan',
+        stepNum: 1,
+        audioSrc: 'audio/tutorial/step1.wav',
+        speaker: 'Sal "Wrench" Sullivan (Voiced by Fenn)',
         avatar: '👷‍♂️',
         title: 'Step 1 of 8: Welcome to City Master!',
         speech: 'Welcome to City Master! In this game, you are the chief builder of your own company. You will buy land, build houses, launch floating sky cities, and become the most successful builder in town. Let us learn how to look around the map!',
@@ -27,7 +29,9 @@ class TutorialSystem {
       },
       {
         id: 'BUY_LAND',
-        speaker: 'Eleanor Vance',
+        stepNum: 2,
+        audioSrc: 'audio/tutorial/step2.wav',
+        speaker: 'Eleanor Vance (Voiced by Fenn)',
         avatar: '🏛️',
         title: 'Step 2 of 8: Buying Your First Land!',
         speech: 'Great job! To build anything in our town, you first need to own a piece of land. Click the Buy Land button at the bottom, then click on any empty green tile on the map.',
@@ -46,7 +50,9 @@ class TutorialSystem {
       },
       {
         id: 'BUILD_HOUSE',
-        speaker: 'Sal "Wrench" Sullivan',
+        stepNum: 3,
+        audioSrc: 'audio/tutorial/step3.wav',
+        speaker: 'Sal "Wrench" Sullivan (Voiced by Fenn)',
         avatar: '👷‍♂️',
         title: 'Step 3 of 8: Building with Helper Workers!',
         speech: 'Awesome! Now let us build your first neighborhood house. Make sure the Helper Workers box is checked so you build super fast and get 10 whole years of free property taxes from City Hall!',
@@ -65,7 +71,9 @@ class TutorialSystem {
       },
       {
         id: 'STORES_AND_SMOKE',
-        speaker: 'Tara Green',
+        stepNum: 4,
+        audioSrc: 'audio/tutorial/step4.wav',
+        speaker: 'Tara Green (Voiced by Fenn)',
         avatar: '🌿',
         title: 'Step 4 of 8: Stores and Dirty Smoke Rules!',
         speech: 'Great work! Now listen to the Golden Rule of city building: Stores need nearby houses to get customers. But keep dirty factories away from houses, because dirty smoke makes neighbors unhappy and lowers rent!',
@@ -82,7 +90,9 @@ class TutorialSystem {
       },
       {
         id: 'STOCK_SLICES',
-        speaker: 'Arthur Sterling',
+        stepNum: 5,
+        audioSrc: 'audio/tutorial/step5.wav',
+        speaker: 'Arthur Sterling (Voiced by Fenn)',
         avatar: '🏦',
         title: 'Step 5 of 8: Company Slices (Stock Market)!',
         speech: 'Look at the Slices tab on the right! Your company is divided into slices called shares. As your town grows and you earn rent, your slice value goes up! You can also buy slices of other builder companies.',
@@ -100,7 +110,9 @@ class TutorialSystem {
       },
       {
         id: 'BANK_LOANS',
-        speaker: 'Arthur Sterling',
+        stepNum: 6,
+        audioSrc: 'audio/tutorial/step6.wav',
+        speaker: 'Arthur Sterling (Voiced by Fenn)',
         avatar: '🏦',
         title: 'Step 6 of 8: Bank Loans & Safe Money Meter!',
         speech: 'Click on the Bank tab! You can borrow money from our bank to expand faster. But always keep your Safe Money Meter in the green! If it drops into the red zone, building freezes until you pay back debt.',
@@ -122,7 +134,9 @@ class TutorialSystem {
       },
       {
         id: 'SKY_CITIES',
-        speaker: 'Dr. Aris Thorne',
+        stepNum: 7,
+        audioSrc: 'audio/tutorial/step7.wav',
+        speaker: 'Dr. Aris Thorne (Voiced by Fenn)',
         avatar: '🛸',
         title: 'Step 7 of 8: Launching Floating Sky Cities!',
         speech: 'Now for the coolest technology in the game: Floating Sky Cities! These level 4 mega structures float high up at Z equals 64 in the clouds. They escape all ground smoke and earn massive rent, but they need Super Floating Crystals every day!',
@@ -140,7 +154,9 @@ class TutorialSystem {
       },
       {
         id: 'CITY_HALL_RULES',
-        speaker: 'Eleanor Vance',
+        stepNum: 8,
+        audioSrc: 'audio/tutorial/step8.wav',
+        speaker: 'Eleanor Vance (Voiced by Fenn)',
         avatar: '🏛️',
         title: 'Step 8 of 8: Neighborhood Leaders & Respect Points!',
         speech: 'Finally, visit City Hall! Each of the 10 neighborhoods has a council leader with the power to say yes or no to big buildings. You can spend Respect Points to change their mind, or run for Mayor yourself in the next election! You are now ready to build your dream metropolis!',
@@ -202,7 +218,7 @@ class TutorialSystem {
     document.getElementById('tut-next-btn').onclick = () => this.nextStep();
     document.getElementById('tut-tts-btn').onclick = () => {
       const step = this.steps[this.currentStep];
-      if (step) SpeechHelper.speak(step.speech);
+      if (step) SpeechHelper.playAudioOrSpeak(step.audioSrc, step.speech);
     };
   }
 
@@ -241,8 +257,8 @@ class TutorialSystem {
 
     if (step.onStart) step.onStart();
 
-    // Read aloud automatically to welcome 5th graders
-    SpeechHelper.speak(step.speech);
+    // Play cloned Fenn voice model audio directly
+    SpeechHelper.playAudioOrSpeak(step.audioSrc, step.speech);
   }
 
   nextStep() {

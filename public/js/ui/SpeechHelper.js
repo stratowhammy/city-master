@@ -143,11 +143,47 @@ class SpeechHelper {
     window.speechSynthesis.speak(utterance);
   }
 
+  static currentAudio = null;
+
+  static playAudioOrSpeak(audioSrc, fallbackText) {
+    SpeechHelper.stop();
+    if (audioSrc) {
+      const audio = new Audio(audioSrc);
+      SpeechHelper.currentAudio = audio;
+      audio.onplay = () => {
+        SpeechHelper.isSpeaking = true;
+        document.body.classList.add('tts-active');
+      };
+      audio.onended = () => {
+        SpeechHelper.isSpeaking = false;
+        SpeechHelper.currentAudio = null;
+        document.body.classList.remove('tts-active');
+      };
+      audio.onerror = () => {
+        console.warn(`Audio file ${audioSrc} not found, falling back to speech synthesis...`);
+        SpeechHelper.currentAudio = null;
+        SpeechHelper.speak(fallbackText);
+      };
+      audio.play().catch(e => {
+        console.warn('Audio play error, falling back to TTS:', e);
+        SpeechHelper.speak(fallbackText);
+      });
+    } else {
+      SpeechHelper.speak(fallbackText);
+    }
+  }
+
   static stop() {
+    if (SpeechHelper.currentAudio) {
+      SpeechHelper.currentAudio.pause();
+      SpeechHelper.currentAudio.currentTime = 0;
+      SpeechHelper.currentAudio = null;
+    }
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      SpeechHelper.isSpeaking = false;
     }
+    SpeechHelper.isSpeaking = false;
+    document.body.classList.remove('tts-active');
   }
 
   static speakElement(elementId) {

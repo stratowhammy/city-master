@@ -11,9 +11,15 @@ class UIController {
     this.unionPledge = true;
     this.activeTab = 'STOCKS';
 
+    this.selectedDrawerFirmId = 'firm_player_1';
+    this.stockChartTimeframe = 500;
+    this.stockChartHoverIdx = -1;
+    this.isStockDrawerOpen = false;
+
     this.initDOM();
     this.initEventListeners();
     this.initCanvasInteractions();
+    this.initStockDrawerEvents();
   }
 
   initDOM() {
@@ -641,6 +647,10 @@ class UIController {
         this.elMarginBadge.classList.add('bg-red-700', 'animate-bounce');
       }
     }
+
+    if (this.isStockDrawerOpen) {
+      this.renderStockDrawer();
+    }
   }
 
   updateTileInspector(tile, openPanel = false) {
@@ -729,54 +739,60 @@ class UIController {
     const el = document.getElementById('tab-stocks');
     if (!el) return;
 
-    const speechHeader = `Stock Market and Companies! Your company is named ${myFirm.name}. Each slice of your company is worth ${myFirm.stock.price.toFixed(2)} dollars. When you build more houses and earn rent, your company slices become worth more money! You can also buy slices of other companies.`;
+    const speechHeader = `Stock Market and Companies! Your company is named ${myFirm.name}. Each share of your company stock is worth ${myFirm.stock.price.toFixed(2)} dollars. When you build more houses and earn rent, your company stock price becomes worth more money! You can also buy and sell stocks of other companies and view 500-tick price graphs.`;
 
     let html = `
       <div class="space-y-4">
+        <!-- Player Firm Stock Card -->
         <div class="p-3 rounded-lg bg-slate-800/90 border border-slate-700">
           <div class="flex justify-between items-center">
             <span class="text-xs text-slate-300 font-bold">👑 Your Company: ${myFirm.name}</span>
             <button class="tts-btn" onclick="SpeechHelper.speak('${speechHeader.replace(/'/g, "\\'")}')" title="Read Aloud">🔊 Read</button>
           </div>
           <div class="flex justify-between items-center mt-2">
-            <span class="text-2xl font-bold text-sky-400">$${myFirm.stock.price.toFixed(2)} <span class="text-xs text-slate-400">/ slice</span></span>
-            <span class="text-xs text-emerald-400 font-bold">Real Value: $${myFirm.stock.nav.toFixed(2)}</span>
+            <span class="text-2xl font-bold text-sky-400">$${myFirm.stock.price.toFixed(2)} <span class="text-xs text-slate-400">/ share</span></span>
+            <span class="text-xs text-emerald-400 font-bold">NAV: $${myFirm.stock.nav.toFixed(2)}</span>
           </div>
           <div class="text-[11px] text-slate-300 mt-2 leading-tight">
-            💡 <strong>Kid Rule:</strong> Your company slice price goes UP as you buy land, build shops, and earn rent!
+            💡 <strong>Kid Rule:</strong> Your company stock price goes UP as you buy land, build shops, and earn rent!
           </div>
+          <button onclick="window.ui.openStockDrawer('${myFirm.id}')" class="w-full mt-2.5 py-2 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all">
+            📊 Open 500-Tick Stock Price Graph Drawer
+          </button>
         </div>
 
         <div class="flex justify-between items-center">
-          <span class="text-xs font-bold text-slate-300 uppercase">🏢 Other City Builders</span>
+          <span class="text-xs font-bold text-slate-300 uppercase">🏢 City Builders & Stocks Available</span>
+          <span class="text-[10px] text-slate-400">Click any company to graph</span>
         </div>
         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
     `;
 
-    const firmsArray = Array.from(state.firms.values()).sort((a, b) => b.netWorth - a.netWorth).slice(0, 12);
+    const firmsArray = Array.from(state.firms.values()).sort((a, b) => b.netWorth - a.netWorth);
 
     for (const f of firmsArray) {
-      const owned = myFirm.shareHoldings[f.id] || 0;
+      const owned = (myFirm.shareHoldings && myFirm.shareHoldings[f.id]) || 0;
       const votingPercent = ((owned / (f.stock.totalShares || 100000)) * 100).toFixed(1);
       const isMe = (f.id === myFirm.id);
-      const fSpeech = `${f.name}. Slice price: ${f.stock.price.toFixed(2)} dollars. You own ${owned} slices, which is ${votingPercent} percent.`;
+      const fSpeech = `${f.name}. Stock price: ${f.stock.price.toFixed(2)} dollars. You own ${owned} shares, which is ${votingPercent} percent.`;
 
       html += `
-        <div class="p-2.5 rounded bg-slate-900/80 border ${isMe ? 'border-sky-500' : 'border-slate-800'} flex flex-col gap-1.5">
-          <div class="flex justify-between items-center">
+        <div class="p-2.5 rounded bg-slate-900/80 border ${isMe ? 'border-sky-500' : 'border-slate-800'} hover:border-slate-600 transition-all flex flex-col gap-1.5">
+          <div class="flex justify-between items-center cursor-pointer" onclick="window.ui.openStockDrawer('${f.id}')">
             <div class="font-semibold text-xs text-slate-200 flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${f.color}"></span>
-              ${f.name} ${isMe ? '<span class="text-[10px] text-sky-400 font-bold">(YOU)</span>' : ''}
-              <button class="tts-btn-small" onclick="SpeechHelper.speak('${fSpeech.replace(/'/g, "\\'")}')">🔊</button>
+              <span class="hover:text-sky-300 transition-colors">${f.name}</span> ${isMe ? '<span class="text-[10px] text-sky-400 font-bold">(YOU)</span>' : ''}
+              <button class="tts-btn-small" onclick="event.stopPropagation(); SpeechHelper.speak('${fSpeech.replace(/'/g, "\\'")}')">🔊</button>
             </div>
             <div class="text-xs font-bold text-sky-400">$${f.stock.price.toFixed(2)}</div>
           </div>
           <div class="flex justify-between items-center text-[11px] text-slate-400">
-            <span>You Own: <strong class="text-amber-400">${owned.toLocaleString()} slices (${votingPercent}%)</strong></span>
+            <span>You Own: <strong class="text-amber-400">${owned.toLocaleString()} shares (${votingPercent}%)</strong></span>
+            <button onclick="window.ui.openStockDrawer('${f.id}')" class="text-[10px] font-bold text-sky-400 hover:text-sky-300 underline">📊 500t Graph</button>
           </div>
           <div class="flex gap-1.5 mt-1">
-            <button onclick="window.ui.tradeStock('${f.id}', 100, true)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white">Buy 100 Slices</button>
-            <button onclick="window.ui.tradeStock('${f.id}', 100, false)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-slate-700 hover:bg-slate-600 text-white" ${owned < 100 ? 'disabled' : ''}>Sell 100</button>
+            <button onclick="window.ui.tradeStock('${f.id}', 100, true)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">Buy 100</button>
+            <button onclick="window.ui.tradeStock('${f.id}', 100, false)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors" ${owned < 100 ? 'disabled' : ''}>Sell 100</button>
             ${!isMe ? `<button onclick="window.ui.takeover('${f.id}')" class="py-1 px-2 text-[10px] font-bold rounded ${votingPercent > 50 ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}" title="Buy whole company when you own over 50%">Take Over</button>` : ''}
           </div>
         </div>
@@ -1157,28 +1173,416 @@ class UIController {
       if (isBuy) {
         if (myFirm.cash < totalCost) {
           this.showToast(`Not enough cash! Need $${totalCost.toLocaleString()}`, 'error');
-          SpeechHelper.speakIfAuto('You do not have enough cash to buy those slices.');
+          SpeechHelper.speakIfAuto('You do not have enough cash to buy those shares.');
           return;
         }
         myFirm.cash -= totalCost;
         myFirm.shareHoldings[targetFirmId] = (myFirm.shareHoldings[targetFirmId] || 0) + count;
-        this.showToast(`📈 Bought ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
-        SpeechHelper.speakIfAuto(`Bought ${count} slices of ${targetFirm.name}.`);
+        this.showToast(`📈 Bought ${count} shares of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
+        SpeechHelper.speakIfAuto(`Bought ${count} shares of ${targetFirm.name}.`);
       } else {
         const owned = myFirm.shareHoldings[targetFirmId] || 0;
         if (owned < count) {
-          this.showToast('You do not own that many slices to sell!', 'error');
+          this.showToast('You do not own that many shares to sell!', 'error');
           return;
         }
         myFirm.cash += totalCost;
         myFirm.shareHoldings[targetFirmId] -= count;
-        this.showToast(`📉 Sold ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
-        SpeechHelper.speakIfAuto(`Sold ${count} slices of ${targetFirm.name}.`);
+        this.showToast(`📉 Sold ${count} shares of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
+        SpeechHelper.speakIfAuto(`Sold ${count} shares of ${targetFirm.name}.`);
       }
       this.updateHUD(this.network.gameState, this.network.firmId);
       this.renderStockMarketTab(this.network.gameState, myFirm);
+      if (this.isStockDrawerOpen && this.selectedDrawerFirmId === targetFirmId) {
+        this.renderStockDrawer();
+      }
     }
     this.network.tradeStock(targetFirmId, count, isBuy);
+  }
+
+  initStockDrawerEvents() {
+    const canvas = document.getElementById('stock-chart-canvas');
+    if (canvas) {
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const width = canvas.width;
+        const firm = this.network.gameState && this.network.gameState.firms && this.network.gameState.firms.get(this.selectedDrawerFirmId);
+        if (!firm || !firm.stock || !firm.stock.history || firm.stock.history.length === 0) return;
+
+        const history = firm.stock.history.slice(-this.stockChartTimeframe);
+        const dataCount = history.length;
+        if (dataCount <= 1) return;
+
+        const padLeft = 45;
+        const padRight = 20;
+        const plotWidth = width - padLeft - padRight;
+        const ratio = Math.max(0, Math.min(1, (mouseX - padLeft) / plotWidth));
+        const idx = Math.min(dataCount - 1, Math.max(0, Math.round(ratio * (dataCount - 1))));
+
+        this.stockChartHoverIdx = idx;
+        const hoveredPrice = history[idx];
+        const statEl = document.getElementById('drawer-hover-stat');
+        if (statEl) {
+          const totalTicks = this.network.gameState.tick || 0;
+          const tickNum = Math.max(0, totalTicks - (dataCount - 1 - idx));
+          statEl.innerHTML = `<span class="text-slate-400">Tick #${tickNum}:</span> <strong class="text-emerald-400">$${hoveredPrice.toFixed(2)}</strong>`;
+        }
+        this.drawStockChartCanvas(history, firm.color || '#38bdf8', firm.stock.price, firm.stock.nav);
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        this.stockChartHoverIdx = -1;
+        const statEl = document.getElementById('drawer-hover-stat');
+        if (statEl) statEl.innerText = 'Hover over chart for details';
+        const firm = this.network.gameState && this.network.gameState.firms && this.network.gameState.firms.get(this.selectedDrawerFirmId);
+        if (firm && firm.stock && firm.stock.history) {
+          const history = firm.stock.history.slice(-this.stockChartTimeframe);
+          this.drawStockChartCanvas(history, firm.color || '#38bdf8', firm.stock.price, firm.stock.nav);
+        }
+      });
+    }
+
+    // Drawer trading buttons
+    ['buy-10', 'buy-100', 'buy-500', 'buy-max', 'sell-10', 'sell-100', 'sell-500', 'sell-all'].forEach(id => {
+      const btn = document.getElementById(`drawer-${id}`);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const firmId = this.selectedDrawerFirmId;
+          const gs = this.network.gameState;
+          const myFirm = gs && gs.firms && gs.firms.get(this.network.firmId);
+          const targetFirm = gs && gs.firms && gs.firms.get(firmId);
+          if (!myFirm || !targetFirm) return;
+
+          const price = targetFirm.stock.price || 15;
+          const owned = (myFirm.shareHoldings && myFirm.shareHoldings[firmId]) || 0;
+
+          if (id === 'buy-10') this.tradeStock(firmId, 10, true);
+          else if (id === 'buy-100') this.tradeStock(firmId, 100, true);
+          else if (id === 'buy-500') this.tradeStock(firmId, 500, true);
+          else if (id === 'buy-max') {
+            const maxAfford = Math.floor(myFirm.cash / price);
+            if (maxAfford > 0) this.tradeStock(firmId, maxAfford, true);
+            else this.showToast('Not enough cash to buy any shares!', 'error');
+          }
+          else if (id === 'sell-10') this.tradeStock(firmId, Math.min(10, owned), false);
+          else if (id === 'sell-100') this.tradeStock(firmId, Math.min(100, owned), false);
+          else if (id === 'sell-500') this.tradeStock(firmId, Math.min(500, owned), false);
+          else if (id === 'sell-all') {
+            if (owned > 0) this.tradeStock(firmId, owned, false);
+            else this.showToast('You do not own any shares of this company!', 'error');
+          }
+        });
+      }
+    });
+
+    const takeoverBtn = document.getElementById('drawer-takeover-btn');
+    if (takeoverBtn) {
+      takeoverBtn.addEventListener('click', () => {
+        this.takeover(this.selectedDrawerFirmId);
+      });
+    }
+
+    const ttsBtn = document.getElementById('drawer-tts-btn');
+    if (ttsBtn) {
+      ttsBtn.addEventListener('click', () => {
+        const gs = this.network.gameState;
+        const f = gs && gs.firms && gs.firms.get(this.selectedDrawerFirmId);
+        if (f) {
+          const myFirm = gs.firms.get(this.network.firmId);
+          const owned = (myFirm && myFirm.shareHoldings && myFirm.shareHoldings[f.id]) || 0;
+          const msg = `${f.name}. Current stock price: ${f.stock.price.toFixed(2)} dollars. Net Asset Value: ${f.stock.nav.toFixed(2)} dollars. You own ${owned.toLocaleString()} shares. Showing ${this.stockChartTimeframe} ticks of price graph history.`;
+          SpeechHelper.speak(msg);
+        }
+      });
+    }
+  }
+
+  openStockDrawer(firmId) {
+    this.selectedDrawerFirmId = firmId || this.network.firmId;
+    this.isStockDrawerOpen = true;
+
+    const drawer = document.getElementById('drawer-stock-graph');
+    if (drawer) drawer.classList.remove('hidden');
+
+    // Populate Selector Dropdown with all 50 firms
+    const sel = document.getElementById('drawer-stock-selector');
+    const gs = this.network.gameState;
+    if (sel && gs && gs.firms) {
+      const allFirms = Array.from(gs.firms.values()).sort((a, b) => a.name.localeCompare(b.name));
+      sel.innerHTML = allFirms.map(f => `
+        <option value="${f.id}" ${f.id === this.selectedDrawerFirmId ? 'selected' : ''}>
+          ${f.name} ($${f.stock.price.toFixed(2)}) ${f.id === this.network.firmId ? '⭐ (YOU)' : ''}
+        </option>
+      `).join('');
+    }
+
+    this.renderStockDrawer();
+  }
+
+  closeStockDrawer() {
+    this.isStockDrawerOpen = false;
+    const drawer = document.getElementById('drawer-stock-graph');
+    if (drawer) drawer.classList.add('hidden');
+  }
+
+  setStockChartTimeframe(ticks) {
+    this.stockChartTimeframe = ticks;
+    const label = document.getElementById('drawer-chart-tf-label');
+    if (label) label.innerText = ticks;
+
+    document.querySelectorAll('.chart-tf-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.ticks) === ticks);
+    });
+
+    this.renderStockDrawer();
+  }
+
+  renderStockDrawer() {
+    if (!this.isStockDrawerOpen) return;
+
+    const gs = this.network.gameState;
+    if (!gs || !gs.firms) return;
+
+    const firm = gs.firms.get(this.selectedDrawerFirmId);
+    const myFirm = gs.firms.get(this.network.firmId);
+    if (!firm) return;
+
+    // Header updates
+    const firmColorEl = document.getElementById('drawer-firm-color');
+    if (firmColorEl) firmColorEl.style.backgroundColor = firm.color || '#38bdf8';
+
+    const firmNameEl = document.getElementById('drawer-firm-name');
+    if (firmNameEl) firmNameEl.innerText = firm.name;
+
+    const firmIdEl = document.getElementById('drawer-firm-id');
+    if (firmIdEl) firmIdEl.innerText = firm.name.split(' ').map(w => w[0]).join('').slice(0, 4).toUpperCase();
+
+    const curPriceEl = document.getElementById('drawer-current-price');
+    if (curPriceEl) curPriceEl.innerText = `$${firm.stock.price.toFixed(2)}`;
+
+    const navEl = document.getElementById('drawer-nav-price');
+    if (navEl) navEl.innerText = `$${firm.stock.nav.toFixed(2)}`;
+
+    // Calculate 500-tick performance metrics
+    const history = (firm.stock.history || [firm.stock.price]).slice(-this.stockChartTimeframe);
+    const startPrice = history[0] || firm.stock.price;
+    const endPrice = history[history.length - 1] || firm.stock.price;
+    const priceDiff = endPrice - startPrice;
+    const percentDiff = startPrice > 0 ? ((priceDiff / startPrice) * 100).toFixed(1) : 0;
+
+    const changeEl = document.getElementById('drawer-price-change');
+    if (changeEl) {
+      const isPos = priceDiff >= 0;
+      changeEl.className = isPos ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+      changeEl.innerText = `${isPos ? '+' : ''}${percentDiff}% (${isPos ? '+' : ''}$${priceDiff.toFixed(2)}) ${isPos ? '📈' : '📉'}`;
+    }
+
+    // Fundamentals
+    const minPrice = Math.min(...history);
+    const maxPrice = Math.max(...history);
+
+    const lowEl = document.getElementById('drawer-stat-low');
+    if (lowEl) lowEl.innerText = `$${minPrice.toFixed(2)}`;
+
+    const highEl = document.getElementById('drawer-stat-high');
+    if (highEl) highEl.innerText = `$${maxPrice.toFixed(2)}`;
+
+    const propEl = document.getElementById('drawer-stat-properties');
+    if (propEl) propEl.innerText = `${firm.totalLand || 0} Land / ${firm.totalBuildings || 0} Bldgs`;
+
+    const owned = (myFirm && myFirm.shareHoldings && myFirm.shareHoldings[firm.id]) || 0;
+    const totalShares = firm.stock.totalShares || 100000;
+    const votingPercent = ((owned / totalShares) * 100).toFixed(1);
+
+    const ownedEl = document.getElementById('drawer-stat-owned');
+    if (ownedEl) ownedEl.innerText = `${owned.toLocaleString()} shares (${votingPercent}%)`;
+
+    // Cash & Trade firm name
+    const playerCashEl = document.getElementById('drawer-player-cash');
+    if (playerCashEl && myFirm) playerCashEl.innerText = `$${Math.round(myFirm.cash).toLocaleString()}`;
+
+    const tradeFirmNameEl = document.getElementById('drawer-trade-firm-name');
+    if (tradeFirmNameEl) tradeFirmNameEl.innerText = firm.name;
+
+    // Takeover Banner
+    const takeoverBanner = document.getElementById('drawer-takeover-banner');
+    if (takeoverBanner) {
+      if (votingPercent > 50 && firm.id !== myFirm.id) {
+        takeoverBanner.classList.remove('hidden');
+      } else {
+        takeoverBanner.classList.add('hidden');
+      }
+    }
+
+    // Draw Canvas Graph
+    this.drawStockChartCanvas(history, firm.color || '#38bdf8', endPrice, firm.stock.nav);
+  }
+
+  drawStockChartCanvas(history, firmColor, currentPrice, navPrice) {
+    const canvas = document.getElementById('stock-chart-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Clear canvas
+    ctx.fillStyle = '#060911';
+    ctx.fillRect(0, 0, width, height);
+
+    if (!history || history.length === 0) return;
+
+    const padLeft = 50;
+    const padRight = 20;
+    const padTop = 25;
+    const padBottom = 30;
+
+    const plotWidth = width - padLeft - padRight;
+    const plotHeight = height - padTop - padBottom;
+
+    const minRaw = Math.min(...history, navPrice || currentPrice);
+    const maxRaw = Math.max(...history, navPrice || currentPrice);
+    const range = Math.max(2.0, maxRaw - minRaw);
+    const minVal = Math.max(0.5, minRaw - range * 0.1);
+    const maxVal = maxRaw + range * 0.1;
+    const valRange = maxVal - minVal;
+
+    // Draw Gridlines & Y-Axis Labels
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+      const y = padTop + (plotHeight / gridSteps) * i;
+      const priceVal = maxVal - (valRange / gridSteps) * i;
+
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(width - padRight, y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 9.5px monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`$${priceVal.toFixed(2)}`, padLeft - 6, y);
+    }
+    ctx.setLineDash([]);
+
+    // NAV Reference Line (Dashed Amber)
+    if (navPrice) {
+      const navY = padTop + plotHeight * (1 - (navPrice - minVal) / valRange);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, navY);
+      ctx.lineTo(width - padRight, navY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 9px -apple-system, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`NAV $${navPrice.toFixed(2)}`, width - padRight - 4, navY - 6);
+    }
+
+    const n = history.length;
+    const getX = (idx) => padLeft + (idx / (n - 1)) * plotWidth;
+    const getY = (val) => padTop + plotHeight * (1 - (val - minVal) / valRange);
+
+    const isGainer = history[history.length - 1] >= history[0];
+    const lineColor = isGainer ? '#38bdf8' : '#f43f5e';
+    const fillTopColor = isGainer ? 'rgba(56, 189, 248, 0.35)' : 'rgba(244, 63, 94, 0.35)';
+
+    // Gradient Area Fill under price curve
+    const gradient = ctx.createLinearGradient(0, padTop, 0, height - padBottom);
+    gradient.addColorStop(0, fillTopColor);
+    gradient.addColorStop(1, 'rgba(6, 9, 17, 0.0)');
+
+    ctx.beginPath();
+    ctx.moveTo(getX(0), height - padBottom);
+    for (let i = 0; i < n; i++) {
+      ctx.lineTo(getX(i), getY(history[i]));
+    }
+    ctx.lineTo(getX(n - 1), height - padBottom);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Price Line Stroke
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(history[0]));
+    for (let i = 1; i < n; i++) {
+      ctx.lineTo(getX(i), getY(history[i]));
+    }
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = lineColor;
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Timeline labels at bottom
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`-${n} Ticks Ago`, padLeft, height - padBottom + 16);
+    ctx.textAlign = 'right';
+    ctx.fillText('Current Tick', width - padRight, height - padBottom + 16);
+
+    // Interactive Hover Crosshair & Tooltip
+    if (this.stockChartHoverIdx >= 0 && this.stockChartHoverIdx < n) {
+      const hIdx = this.stockChartHoverIdx;
+      const hX = getX(hIdx);
+      const hY = getY(history[hIdx]);
+      const hVal = history[hIdx];
+
+      // Vertical crosshair
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(hX, padTop);
+      ctx.lineTo(hX, height - padBottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Point circle
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(hX, hY, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Tooltip Box
+      const tipText = `$${hVal.toFixed(2)}`;
+      ctx.font = 'bold 11px -apple-system, monospace';
+      const tipWidth = ctx.measureText(tipText).width + 12;
+      const tipHeight = 18;
+      let tipX = hX - tipWidth / 2;
+      if (tipX < padLeft) tipX = padLeft;
+      if (tipX + tipWidth > width - padRight) tipX = width - padRight - tipWidth;
+      const tipY = Math.max(padTop - 20, hY - 26);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.roundRect(tipX, tipY, tipWidth, tipHeight, 4);
+      ctx.fill();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tipText, tipX + tipWidth / 2, tipY + tipHeight / 2);
+    }
   }
 
   takeover(targetFirmId) {
@@ -1202,7 +1606,6 @@ class UIController {
         return;
       }
 
-      // Optimistic client update for instant response
       firm.cash += amount;
       if (!firm.marginLoan) firm.marginLoan = { borrowedAmount: 0, collateralShares: 0 };
       firm.marginLoan.borrowedAmount += amount;
@@ -1230,7 +1633,6 @@ class UIController {
         return;
       }
 
-      // Optimistic client update
       firm.cash -= actualRepay;
       firm.marginLoan.borrowedAmount -= actualRepay;
       this.updateHUD(this.network.gameState, this.network.firmId);

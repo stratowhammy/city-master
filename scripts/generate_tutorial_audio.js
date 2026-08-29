@@ -36,7 +36,7 @@ const STEPS = [
   {
     step: 5,
     id: 'step5',
-    text: 'Look at the Slices tab on the right! Your company is divided into slices called shares. As your town grows and you earn rent, your slice value goes up! You can also buy slices of other builder companies.'
+    text: 'Look at the Stocks tab on the right! Your company is divided into shares called stocks. As your town grows and you earn rent, your stock price goes up! You can also buy stocks of other builder companies.'
   },
   {
     step: 6,

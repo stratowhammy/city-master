@@ -38,8 +38,8 @@
 
       <div class="hud-item">
         <div class="hud-label">
-          <span>🏷️ Slice Value</span>
-          <button class="tts-btn-small" onclick="SpeechHelper.speak('Company slice value: ' + document.getElementById('hud-stock-price').innerText)" title="Read Aloud">🔊</button>
+          <span>🏷️ Stock Price</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Company stock price: ' + document.getElementById('hud-stock-price').innerText)" title="Read Aloud">🔊</button>
         </div>
         <div id="hud-stock-price" class="hud-value text-cyan-300">$15.00</div>
       </div>
@@ -128,15 +128,15 @@
     </div>
   </aside>
 
-  <!-- Bottom Construction Toolbar -->
+  <!-- Bottom Interactive Construction Toolbar -->
   <footer class="bottom-toolbar">
-    <div class="tool-group">
-      <button class="tool-btn active" data-tool="INSPECT" title="Look around the map">🔍 Look</button>
-      <button class="tool-btn" data-tool="BUY_LAND" title="Buy empty land to build on">🏷️ Buy Land</button>
-      <button class="tool-btn" data-tool="BUILD_RESIDENTIAL" title="Build a neighborhood house">🏠 House</button>
-      <button class="tool-btn" data-tool="BUILD_COMMERCIAL" title="Build a neighborhood store">🏢 Store</button>
-      <button class="tool-btn" data-tool="BUILD_INDUSTRIAL" title="Build a workshop factory">🏭 Factory</button>
-      <button class="tool-btn" data-tool="UPGRADE" title="Make your building bigger and taller">⬆️ Upgrade</button>
+    <div class="flex items-center gap-1 overflow-x-auto py-1">
+      <button class="tool-btn active" data-tool="INSPECT" title="Inspect land and buildings">🔍 Inspect</button>
+      <button class="tool-btn text-emerald-400" data-tool="BUY_LAND" title="Buy available empty land">🏷️ Buy Land</button>
+      <button class="tool-btn text-blue-400" data-tool="BUILD_RESIDENTIAL" title="Build houses for families">🏠 House</button>
+      <button class="tool-btn text-cyan-400" data-tool="BUILD_COMMERCIAL" title="Build stores and offices">🏪 Store</button>
+      <button class="tool-btn text-amber-400" data-tool="BUILD_INDUSTRIAL" title="Build factories for production">🏭 Factory</button>
+      <button class="tool-btn text-indigo-400" data-tool="UPGRADE" title="Upgrade building density">⬆️ Upgrade</button>
       <!-- Sky City Feature Disabled (Preserved for future reactivation) -->
       <button class="tool-btn arcology-btn hidden" data-tool="BUILD_ARCOLOGY" title="Launch a Floating Sky City into the air!">🛸 Sky City</button>
       <button class="tool-btn text-rose-400" data-tool="DEMOLISH" title="Bulldoze a building">💣 Bulldoze</button>
@@ -161,7 +161,7 @@
   <!-- Sidebar Dashboard -->
   <aside class="sidebar-panel">
     <div class="sidebar-tabs">
-      <button class="tab-btn active" data-tab="STOCKS">📈 Slices</button>
+      <button class="tab-btn active" data-tab="STOCKS">📈 Stocks</button>
       <button class="tab-btn" data-tab="MARGIN">🏦 Bank</button>
       <button class="tab-btn" data-tab="POLITICS">🏛️ City Hall</button>
       <button class="tab-btn" data-tab="RESOURCES">🌐 Materials</button>
@@ -193,6 +193,120 @@
       <div id="news-ticker-content" class="max-h-24 overflow-y-auto"></div>
     </div>
   </aside>
+
+  <!-- Interactive 500-Tick Stock Price Graph Drawer -->
+  <div id="drawer-stock-graph" class="stock-drawer hidden">
+    <div class="stock-drawer-backdrop" onclick="window.ui.closeStockDrawer()"></div>
+    <div class="stock-drawer-content">
+      <!-- Drawer Header -->
+      <div class="stock-drawer-header">
+        <div class="flex items-center gap-3">
+          <div id="drawer-firm-color" class="w-4 h-4 rounded-full bg-sky-500 shadow-sm"></div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="drawer-firm-name" class="text-base font-bold text-white">Pinnacle Metro Enterprises</h2>
+              <span id="drawer-firm-id" class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">PME</span>
+            </div>
+            <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+              <span>Current Stock: <strong id="drawer-current-price" class="text-sky-300 font-bold">$15.00</strong></span>
+              <span>•</span>
+              <span id="drawer-price-change" class="text-emerald-400 font-bold">+12.5% 📈</span>
+              <span>•</span>
+              <span>NAV: <strong id="drawer-nav-price" class="text-slate-300">$15.00</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="drawer-tts-btn" class="tts-btn" title="Read Stock Info">🔊 Read Info</button>
+          <button onclick="window.ui.closeStockDrawer()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm">✖</button>
+        </div>
+      </div>
+
+      <!-- Quick Switcher Bar -->
+      <div class="px-4 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center gap-2 overflow-x-auto">
+        <span class="text-[10px] font-bold uppercase text-slate-500 shrink-0">Switch Stock:</span>
+        <select id="drawer-stock-selector" onchange="window.ui.openStockDrawer(this.value)" class="bg-slate-800 text-xs font-semibold text-white px-2.5 py-1 rounded border border-slate-700 focus:outline-none focus:border-sky-500">
+        </select>
+        <div class="flex items-center gap-1 ml-auto shrink-0">
+          <button class="chart-tf-btn active" data-ticks="500" onclick="window.ui.setStockChartTimeframe(500)">500 Ticks</button>
+          <button class="chart-tf-btn" data-ticks="250" onclick="window.ui.setStockChartTimeframe(250)">250 Ticks</button>
+          <button class="chart-tf-btn" data-ticks="100" onclick="window.ui.setStockChartTimeframe(100)">100 Ticks</button>
+          <button class="chart-tf-btn" data-ticks="50" onclick="window.ui.setStockChartTimeframe(50)">50 Ticks</button>
+        </div>
+      </div>
+
+      <!-- Drawer Body -->
+      <div class="stock-drawer-body p-4 space-y-4 overflow-y-auto">
+        <!-- 500-Tick Interactive Canvas Graph -->
+        <div class="stock-chart-card">
+          <div class="flex justify-between items-center mb-2">
+            <div class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span>📊 Price History Over Last <span id="drawer-chart-tf-label">500</span> Ticks</span>
+            </div>
+            <div id="drawer-hover-stat" class="text-xs font-mono font-bold text-sky-300">Hover over chart for details</div>
+          </div>
+          <div class="stock-canvas-wrapper">
+            <canvas id="stock-chart-canvas" width="680" height="240"></canvas>
+          </div>
+        </div>
+
+        <!-- Fundamentals Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">500t Low</div>
+            <div id="drawer-stat-low" class="text-sm font-bold text-rose-400 mt-0.5">$0.00</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">500t High</div>
+            <div id="drawer-stat-high" class="text-sm font-bold text-emerald-400 mt-0.5">$0.00</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Properties Owned</div>
+            <div id="drawer-stat-properties" class="text-sm font-bold text-sky-400 mt-0.5">0 Land / 0 Bldgs</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Your Holdings</div>
+            <div id="drawer-stat-owned" class="text-sm font-bold text-amber-400 mt-0.5">0 shares (0%)</div>
+          </div>
+        </div>
+
+        <!-- Quick Buy/Sell Trading Terminal Inside Drawer -->
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="flex justify-between items-center mb-2.5">
+            <div class="text-xs font-bold text-slate-200">⚡ Trade Shares for <span id="drawer-trade-firm-name">Company</span></div>
+            <div class="text-xs text-slate-400">Your Cash: <strong id="drawer-player-cash" class="text-emerald-400 font-bold">$150,000</strong></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Buy Side -->
+            <div class="space-y-1.5">
+              <div class="text-[10px] font-bold text-emerald-400 uppercase">Buy Shares</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button id="drawer-buy-10" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white transition-all">+10 Shares</button>
+                <button id="drawer-buy-100" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all">+100 Shares</button>
+                <button id="drawer-buy-500" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white transition-all">+500 Shares</button>
+                <button id="drawer-buy-max" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-emerald-700 hover:bg-emerald-600 text-emerald-100 transition-all">Buy Max</button>
+              </div>
+            </div>
+            <!-- Sell Side -->
+            <div class="space-y-1.5">
+              <div class="text-[10px] font-bold text-rose-400 uppercase">Sell Shares</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button id="drawer-sell-10" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white transition-all">-10 Shares</button>
+                <button id="drawer-sell-100" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all">-100 Shares</button>
+                <button id="drawer-sell-500" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white transition-all">-500 Shares</button>
+                <button id="drawer-sell-all" class="py-1.5 px-2 text-xs font-bold rounded-lg bg-rose-700 hover:bg-rose-600 text-rose-100 transition-all">Sell All</button>
+              </div>
+            </div>
+          </div>
+          <!-- Takeover Alert if >50% -->
+          <div id="drawer-takeover-banner" class="hidden mt-3 p-2.5 rounded-lg bg-purple-950/80 border border-purple-500 text-center">
+            <span class="text-xs font-bold text-purple-300">👑 You own over 50% voting control of this company!</span>
+            <button id="drawer-takeover-btn" class="mt-1.5 w-full py-1.5 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg">⚡ Execute Hostile Takeover & Acquire Assets</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Actionable Margin Call Teaching Modal -->
   <div id="modal-margin-call" class="modal-overlay hidden">

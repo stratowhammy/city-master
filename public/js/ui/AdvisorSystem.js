@@ -55,7 +55,7 @@ class AdvisorSystem {
 
     return {
       title: '🚨 BANK DEBT ALERT: Safe Money Meter is in the Red!',
-      speechText: `Bank debt alert! Your safe money meter dropped to ${firm.calculatedMarginRatio || 95} percent. The bank wants to help you protect your company! Here are three easy choices: Choice A, pay back fifteen thousand dollars to the bank. Choice B, sell some extra company slices. Choice C, bulldoze an unused building. Click any choice below!`,
+      speechText: `Bank debt alert! Your safe money meter dropped to ${firm.calculatedMarginRatio || 95} percent. The bank wants to help you protect your company! Here are three easy choices: Choice A, pay back fifteen thousand dollars to the bank. Choice B, sell some extra company stocks. Choice C, bulldoze an unused building. Click any choice below!`,
       explanation: `Your company borrowed money from the bank, and your Safe Money Meter dropped to ${firm.calculatedMarginRatio || 95}%. The bank requires a 110% buffer to keep building. Here is what you can do right now to get back in the green:`,
       options: [
         {

@@ -497,7 +497,21 @@ class GameState {
       '#eab308', '#6366f1', '#14b8a6', '#f97316', '#a855f7', '#d946ef', '#0ea5e9', '#22c55e'
     ];
 
+    const generateInitialStockHistory = (basePrice, count = 500) => {
+      const history = [];
+      let cur = basePrice * 0.85;
+      for (let i = 0; i < count; i++) {
+        const drift = (basePrice - cur) * 0.04;
+        const noise = (Math.random() - 0.48) * (basePrice * 0.035);
+        cur = Math.max(1.0, +(cur + drift + noise).toFixed(2));
+        history.push(cur);
+      }
+      history[history.length - 1] = basePrice;
+      return history;
+    };
+
     // Create Firm 1 (Player's default firm)
+    const playerPrice = 15.00;
     const playerFirm = {
       id: 'firm_player_1',
       name: 'Pinnacle Metro Enterprises',
@@ -512,9 +526,9 @@ class GameState {
       stock: {
         totalShares: 100000,
         publicShares: 35000,
-        price: 15.00,
-        nav: 15.00,
-        history: [15.00, 15.00, 15.00]
+        price: playerPrice,
+        nav: playerPrice,
+        history: generateInitialStockHistory(playerPrice, 500)
       },
       shareHoldings: { firm_player_1: 65000 },
       shortPositions: {},
@@ -543,6 +557,7 @@ class GameState {
       const botId = `firm_bot_${i + 2}`;
       const name = BOT_NAMES[i] || `Constellation Firm #${i + 2}`;
       const color = COLORS[(i + 1) % COLORS.length];
+      const botPrice = +(10.00 + Math.random() * 8).toFixed(2);
       const botFirm = {
         id: botId,
         name,
@@ -558,9 +573,9 @@ class GameState {
         stock: {
           totalShares: 100000,
           publicShares: 40000,
-          price: 10.00 + Math.random() * 5,
-          nav: 12.00,
-          history: [12.00]
+          price: botPrice,
+          nav: botPrice,
+          history: generateInitialStockHistory(botPrice, 500)
         },
         shareHoldings: { [botId]: 60000 },
         shortPositions: {},

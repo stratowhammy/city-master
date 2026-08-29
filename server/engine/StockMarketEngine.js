@@ -80,7 +80,7 @@ class StockMarketEngine {
       if (firm.stock.price < 1.0) firm.stock.price = 1.0;
 
       firm.stock.history.push(firm.stock.price);
-      if (firm.stock.history.length > 25) firm.stock.history.shift();
+      if (firm.stock.history.length > 500) firm.stock.history.shift();
 
       // Total Net Worth calculation (including stock holdings)
       let portfolioValue = 0;

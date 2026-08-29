@@ -89,19 +89,19 @@ class TutorialSystem {
         onStart: () => {}
       },
       {
-        id: 'STOCK_SLICES',
+        id: 'STOCK_SHARES',
         stepNum: 5,
         audioSrc: 'audio/tutorial/step5.wav',
         speaker: 'Arthur Sterling (Voiced by Fenn)',
         avatar: '🏦',
-        title: 'Step 5 of 8: Company Slices (Stock Market)!',
-        speech: 'Look at the Slices tab on the right! Your company is divided into slices called shares. As your town grows and you earn rent, your slice value goes up! You can also buy slices of other builder companies.',
+        title: 'Step 5 of 8: Company Stocks & Shares!',
+        speech: 'Look at the Stocks tab on the right! Your company is divided into shares called stocks. As your town grows and you earn rent, your stock price goes up! You can also buy stocks of other builder companies.',
         body: `
           <p>Every builder in town is on the <strong>City Stock Exchange</strong>.</p>
-          <p class="mt-1">📈 When you earn rent and buy land, your <strong>Slice Value</strong> goes up!</p>
-          <p class="mt-1">🤝 <strong>Super Secret:</strong> If you buy more than 50% of another company slices, you can <em>Take Over</em> their whole company!</p>
+          <p class="mt-1">📈 When you earn rent and buy land, your <strong>Stock Price</strong> goes up!</p>
+          <p class="mt-1">🤝 <strong>Super Secret:</strong> If you buy more than 50% of another company's stock, you can <em>Take Over</em> their whole company!</p>
         `,
-        goal: 'Check the Slices tab.',
+        goal: 'Check the Stocks tab.',
         buttonText: 'Next Step 👉',
         onStart: () => {
           const tab = document.querySelector('[data-tab="STOCKS"]');

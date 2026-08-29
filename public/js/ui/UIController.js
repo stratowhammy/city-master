@@ -158,40 +158,42 @@ class UIController {
 
   initCanvasInteractions() {
     const canvas = this.renderer.canvas;
-    let isDragging = false;
+    let isMouseDown = false;
     let dragStartX = 0;
     let dragStartY = 0;
+    let totalMoved = 0;
 
     canvas.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
-        isDragging = true;
+        isMouseDown = true;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
+        totalMoved = 0;
       }
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (isDragging) {
+      if (isMouseDown) {
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
-        this.renderer.camera.x += dx * (window.devicePixelRatio || 1);
-        this.renderer.camera.y += dy * (window.devicePixelRatio || 1);
+        totalMoved += Math.hypot(dx, dy);
+
+        // Smooth world-space panning
+        this.renderer.camera.x += dx / this.renderer.camera.zoom;
+        this.renderer.camera.y += dy / this.renderer.camera.zoom;
       }
 
+      // Update hovered tile position
       const rect = canvas.getBoundingClientRect();
-      const clientX = (e.clientX - rect.left) * (window.devicePixelRatio || 1);
-      const clientY = (e.clientY - rect.top) * (window.devicePixelRatio || 1);
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
 
-      const invZoom = 1 / this.renderer.camera.zoom;
-      const worldX = (clientX - canvas.width / 2 - this.renderer.camera.x) * invZoom;
-      const worldY = (clientY - canvas.height / 2 - this.renderer.camera.y) * invZoom;
-
-      const gridPos = this.renderer.screenToGrid(worldX, worldY);
+      const gridPos = this.renderer.screenToGrid(screenX, screenY);
       const gs = this.network.gameState;
 
-      if (gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
+      if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
         this.renderer.hoveredTile = gridPos;
         if (gs.grid && gs.grid[gridPos.x]) {
           this.updateTileInspector(gs.grid[gridPos.x][gridPos.y]);
@@ -202,11 +204,19 @@ class UIController {
     });
 
     window.addEventListener('mouseup', (e) => {
-      if (isDragging) {
-        isDragging = false;
-        const moved = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
-        if (moved < 6 && this.renderer.hoveredTile) {
-          this.executeToolAction(this.renderer.hoveredTile.x, this.renderer.hoveredTile.y);
+      if (isMouseDown) {
+        isMouseDown = false;
+        // If movement was a tap/click (< 8px total displacement), trigger action on tile
+        if (totalMoved < 8) {
+          const rect = canvas.getBoundingClientRect();
+          const screenX = e.clientX - rect.left;
+          const screenY = e.clientY - rect.top;
+          const gridPos = this.renderer.screenToGrid(screenX, screenY);
+          const gs = this.network.gameState;
+
+          if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
+            this.executeToolAction(gridPos.x, gridPos.y);
+          }
         }
       }
     });
@@ -214,7 +224,7 @@ class UIController {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      this.renderer.camera.zoom = Math.max(this.renderer.camera.minZoom, Math.min(this.renderer.camera.maxZoom, this.renderer.camera.zoom * zoomFactor));
+      this.renderer.camera.zoom = Math.max(0.3, Math.min(2.5, this.renderer.camera.zoom * zoomFactor));
     }, { passive: false });
   }
 
@@ -228,14 +238,36 @@ class UIController {
     switch (this.selectedTool) {
       case 'INSPECT':
         this.updateTileInspector(tile, true);
+        const district = gs.districts.find(d => d.id === tile.districtId);
+        SpeechHelper.speak(`Tile ${x}, ${y}. Neighborhood: ${district ? district.name : 'District ' + tile.districtId}. Value is ${tile.landValue} dollars.`);
         break;
 
       case 'BUY_LAND':
         if (tile.isWater) {
           this.showToast('You cannot buy water tiles! Fish live here.', 'error');
+          SpeechHelper.speak('You cannot buy water tiles.');
         } else if (tile.ownerId) {
-          this.showToast('Someone else already owns this tile!', 'error');
+          const owner = gs.firms.get(tile.ownerId);
+          const isMine = (tile.ownerId === this.network.firmId);
+          const msg = isMine ? 'You already own this land!' : `Owned by ${owner ? owner.name : 'another builder'}!`;
+          this.showToast(msg, 'error');
+          SpeechHelper.speak(msg);
         } else {
+          const cost = tile.landValue || 5000;
+          const firm = gs.firms.get(this.network.firmId);
+          if (firm && firm.cash < cost) {
+            this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to buy this land.`, 'error');
+            SpeechHelper.speak(`You need ${cost.toLocaleString()} dollars to buy this land.`);
+            return;
+          }
+          // Optimistic local update
+          if (firm) {
+            firm.cash -= cost;
+            tile.ownerId = firm.id;
+            this.updateHUD(gs, this.network.firmId);
+            this.showToast(`🏷️ Purchased land at (${x}, ${y}) for $${cost.toLocaleString()}!`, 'success');
+            SpeechHelper.speak(`Purchased land parcel at ${x}, ${y}!`);
+          }
           this.network.buyLand(x, y);
         }
         break;
@@ -243,6 +275,9 @@ class UIController {
       case 'BUILD_RESIDENTIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
+          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+        } else if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
         } else {
           this.network.constructBuilding(x, y, 'RESIDENTIAL', this.unionPledge);
         }
@@ -251,6 +286,9 @@ class UIController {
       case 'BUILD_COMMERCIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
+          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+        } else if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
         } else {
           this.network.constructBuilding(x, y, 'COMMERCIAL', this.unionPledge);
         }
@@ -259,6 +297,9 @@ class UIController {
       case 'BUILD_INDUSTRIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
+          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+        } else if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
         } else {
           this.network.constructBuilding(x, y, 'INDUSTRIAL', this.unionPledge);
         }
@@ -267,13 +308,6 @@ class UIController {
       case 'BUILD_ARCOLOGY':
         // Sky City feature disabled (preserved for future reactivation)
         this.showToast('Sky Cities are currently disabled.', 'info');
-        /*
-        if (!tile.ownerId) {
-          this.showToast('You must own the ground below before launching a Floating Sky City!', 'error');
-        } else {
-          this.network.constructArcology(x, y, this.unionPledge);
-        }
-        */
         break;
 
       case 'UPGRADE':

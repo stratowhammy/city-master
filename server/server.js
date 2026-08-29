@@ -299,7 +299,7 @@ function handleClientMessage(client, msg) {
     case 'CONSTRUCT_BUILDING': {
       const { x, y, buildingType, unionBuilt } = payload;
       const tile = gameState.grid[x] && gameState.grid[x][y];
-      if (!tile || tile.ownerId !== firm.id || tile.groundBuilding) return;
+      if (!tile || tile.ownerId !== firm.id || (tile.groundBuilding && tile.groundBuilding.type !== 'ROAD')) return;
 
       // Check councilmanic prerogative / zoning rules
       const check = politicsEngine.checkCouncilmanicPrerogative(tile.districtId, firm.id, buildingType, 1, false);

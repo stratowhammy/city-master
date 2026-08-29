@@ -135,6 +135,7 @@ class TutorialSystem {
       {
         id: 'UPGRADE_BUILDINGS',
         stepNum: 7,
+        audioSrc: 'audio/tutorial/step7.wav',
         speaker: 'Sal "Wrench" Sullivan (Voiced by Fenn)',
         avatar: '🏗️',
         title: 'Step 7 of 8: Upgrading to High-Rise Towers!',

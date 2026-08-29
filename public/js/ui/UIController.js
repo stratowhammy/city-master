@@ -269,30 +269,37 @@ class UIController {
   initCanvasInteractions() {
     const canvas = this.renderer.canvas;
     let isMouseDown = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let totalMoved = 0;
+    let mouseDownClientX = 0;
+    let mouseDownClientY = 0;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let isDraggingCamera = false;
 
     canvas.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
         isMouseDown = true;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        totalMoved = 0;
+        isDraggingCamera = false;
+        mouseDownClientX = e.clientX;
+        mouseDownClientY = e.clientY;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
       }
     });
 
     window.addEventListener('mousemove', (e) => {
       if (isMouseDown) {
-        const dx = e.clientX - dragStartX;
-        const dy = e.clientY - dragStartY;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        totalMoved += Math.hypot(dx, dy);
+        const dx = e.clientX - lastDragX;
+        const dy = e.clientY - lastDragY;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
 
-        // Smooth world-space panning
-        this.renderer.camera.x += dx / this.renderer.camera.zoom;
-        this.renderer.camera.y += dy / this.renderer.camera.zoom;
+        const totalDist = Math.hypot(e.clientX - mouseDownClientX, e.clientY - mouseDownClientY);
+        if (totalDist > 6) {
+          isDraggingCamera = true;
+          // Smooth world-space panning
+          this.renderer.camera.x += dx / this.renderer.camera.zoom;
+          this.renderer.camera.y += dy / this.renderer.camera.zoom;
+        }
       }
 
       // Update hovered tile position
@@ -316,8 +323,9 @@ class UIController {
     window.addEventListener('mouseup', (e) => {
       if (isMouseDown) {
         isMouseDown = false;
-        // If movement was a tap/click (< 8px total displacement), trigger action on tile
-        if (totalMoved < 8) {
+        const totalDist = Math.hypot(e.clientX - mouseDownClientX, e.clientY - mouseDownClientY);
+        // If movement was less than 16px, treat as an intentional tile click
+        if (totalDist < 16 && !isDraggingCamera) {
           const rect = canvas.getBoundingClientRect();
           const screenX = e.clientX - rect.left;
           const screenY = e.clientY - rect.top;
@@ -328,6 +336,19 @@ class UIController {
             this.executeToolAction(gridPos.x, gridPos.y);
           }
         }
+      }
+    });
+
+    // Fallback direct click handler
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const gridPos = this.renderer.screenToGrid(screenX, screenY);
+      const gs = this.network.gameState;
+
+      if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
+        this.executeToolAction(gridPos.x, gridPos.y);
       }
     });
 
@@ -344,6 +365,7 @@ class UIController {
     if (!tile) return;
 
     this.renderer.selectedTile = { x, y };
+    const firm = gs.firms instanceof Map ? gs.firms.get(this.network.firmId) : null;
 
     switch (this.selectedTool) {
       case 'INSPECT':
@@ -364,7 +386,6 @@ class UIController {
           SpeechHelper.speakIfAuto(msg);
         } else {
           const cost = tile.landValue || 5000;
-          const firm = gs.firms.get(this.network.firmId);
           if (firm && firm.cash < cost) {
             this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to buy this land.`, 'error');
             SpeechHelper.speakIfAuto(`You need ${cost.toLocaleString()} dollars to buy this land.`);
@@ -382,61 +403,195 @@ class UIController {
         }
         break;
 
-      case 'BUILD_RESIDENTIAL':
+      case 'BUILD_RESIDENTIAL': {
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
           SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
-        } else if (tile.ownerId !== this.network.firmId) {
-          this.showToast('You can only build on your own land!', 'error');
-        } else {
-          this.network.constructBuilding(x, y, 'RESIDENTIAL', this.unionPledge);
+          return;
         }
-        break;
+        if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
+          return;
+        }
+        if (tile.groundBuilding && tile.groundBuilding.type !== 'ROAD') {
+          this.showToast('This tile already has a building! Use Upgrade (⬆️) or Bulldoze (💣).', 'info');
+          return;
+        }
 
-      case 'BUILD_COMMERCIAL':
-        if (!tile.ownerId) {
-          this.showToast('Buy this land first with the "Buy Land" button!', 'error');
-          SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
-        } else if (tile.ownerId !== this.network.firmId) {
-          this.showToast('You can only build on your own land!', 'error');
-        } else {
-          this.network.constructBuilding(x, y, 'COMMERCIAL', this.unionPledge);
+        const cost = this.unionPledge ? 22000 : 15000;
+        if (firm && firm.cash < cost) {
+          this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to build a house.`, 'error');
+          SpeechHelper.speakIfAuto(`You need ${cost.toLocaleString()} dollars to build a house.`);
+          return;
         }
-        break;
 
-      case 'BUILD_INDUSTRIAL':
+        // Optimistic local update
+        if (firm) {
+          firm.cash -= cost;
+          tile.zoning = 'RESIDENTIAL';
+          tile.roadLevel = 0;
+          tile.groundBuilding = {
+            type: 'RESIDENTIAL',
+            level: 1,
+            name: `${firm.name.split(' ')[0]} House L1`,
+            constructedTick: gs.tick || 0,
+            health: 100,
+            taxAbatedUntil: this.unionPledge ? 9999 : 0,
+            unionBuilt: !!this.unionPledge,
+            rentIncome: 85,
+            pollution: 0,
+            crime: 0,
+            population: 120,
+            workers: 0
+          };
+          this.updateHUD(gs, this.network.firmId);
+          this.showToast('🏠 Built neighborhood house!', 'success');
+          SpeechHelper.speakIfAuto('Built neighborhood house!');
+        }
+        this.network.constructBuilding(x, y, 'RESIDENTIAL', this.unionPledge);
+        break;
+      }
+
+      case 'BUILD_COMMERCIAL': {
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
           SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
-        } else if (tile.ownerId !== this.network.firmId) {
-          this.showToast('You can only build on your own land!', 'error');
-        } else {
-          this.network.constructBuilding(x, y, 'INDUSTRIAL', this.unionPledge);
+          return;
         }
+        if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
+          return;
+        }
+        if (tile.groundBuilding && tile.groundBuilding.type !== 'ROAD') {
+          this.showToast('This tile already has a building! Use Upgrade (⬆️) or Bulldoze (💣).', 'info');
+          return;
+        }
+
+        const cost = this.unionPledge ? 22000 : 15000;
+        if (firm && firm.cash < cost) {
+          this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to build a store.`, 'error');
+          SpeechHelper.speakIfAuto(`You need ${cost.toLocaleString()} dollars to build a store.`);
+          return;
+        }
+
+        // Optimistic local update
+        if (firm) {
+          firm.cash -= cost;
+          tile.zoning = 'COMMERCIAL';
+          tile.roadLevel = 0;
+          tile.groundBuilding = {
+            type: 'COMMERCIAL',
+            level: 1,
+            name: `${firm.name.split(' ')[0]} Store L1`,
+            constructedTick: gs.tick || 0,
+            health: 100,
+            taxAbatedUntil: this.unionPledge ? 9999 : 0,
+            unionBuilt: !!this.unionPledge,
+            rentIncome: 110,
+            pollution: 0,
+            crime: 8,
+            population: 0,
+            workers: 60
+          };
+          this.updateHUD(gs, this.network.firmId);
+          this.showToast('🏪 Built neighborhood store!', 'success');
+          SpeechHelper.speakIfAuto('Built neighborhood store!');
+        }
+        this.network.constructBuilding(x, y, 'COMMERCIAL', this.unionPledge);
         break;
+      }
+
+      case 'BUILD_INDUSTRIAL': {
+        if (!tile.ownerId) {
+          this.showToast('Buy this land first with the "Buy Land" button!', 'error');
+          SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
+          return;
+        }
+        if (tile.ownerId !== this.network.firmId) {
+          this.showToast('You can only build on your own land!', 'error');
+          return;
+        }
+        if (tile.groundBuilding && tile.groundBuilding.type !== 'ROAD') {
+          this.showToast('This tile already has a building! Use Upgrade (⬆️) or Bulldoze (💣).', 'info');
+          return;
+        }
+
+        const cost = this.unionPledge ? 22000 : 15000;
+        if (firm && firm.cash < cost) {
+          this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to build a factory.`, 'error');
+          SpeechHelper.speakIfAuto(`You need ${cost.toLocaleString()} dollars to build a factory.`);
+          return;
+        }
+
+        // Optimistic local update
+        if (firm) {
+          firm.cash -= cost;
+          tile.zoning = 'INDUSTRIAL';
+          tile.roadLevel = 0;
+          tile.groundBuilding = {
+            type: 'INDUSTRIAL',
+            level: 1,
+            name: `${firm.name.split(' ')[0]} Factory L1`,
+            constructedTick: gs.tick || 0,
+            health: 100,
+            taxAbatedUntil: this.unionPledge ? 9999 : 0,
+            unionBuilt: !!this.unionPledge,
+            rentIncome: 140,
+            pollution: 30,
+            crime: 0,
+            population: 0,
+            workers: 35
+          };
+          this.updateHUD(gs, this.network.firmId);
+          this.showToast('🏭 Built industrial factory!', 'success');
+          SpeechHelper.speakIfAuto('Built industrial factory!');
+        }
+        this.network.constructBuilding(x, y, 'INDUSTRIAL', this.unionPledge);
+        break;
+      }
 
       case 'BUILD_ARCOLOGY':
-        // Sky City feature disabled (preserved for future reactivation)
         this.showToast('Sky Cities are currently disabled.', 'info');
         break;
 
-      case 'UPGRADE':
+      case 'UPGRADE': {
         if (tile.ownerId !== this.network.firmId) {
           this.showToast('You can only upgrade your own buildings!', 'error');
-        } else if (!tile.groundBuilding) {
+        } else if (!tile.groundBuilding || tile.groundBuilding.type === 'ROAD') {
           this.showToast('Nothing to upgrade on this tile!', 'error');
+        } else if (tile.groundBuilding.level >= 3) {
+          this.showToast('This building is already at Maximum Level 3 High-Rise!', 'info');
         } else {
+          const newLvl = tile.groundBuilding.level + 1;
+          const cost = newLvl * 25000;
+          if (firm && firm.cash < cost) {
+            this.showToast(`Need $${cost.toLocaleString()} to upgrade to Level ${newLvl}!`, 'error');
+            return;
+          }
+          if (firm) {
+            firm.cash -= cost;
+            tile.groundBuilding.level = newLvl;
+            this.updateHUD(gs, this.network.firmId);
+            this.showToast(`⬆️ Upgraded building to Level ${newLvl}!`, 'success');
+            SpeechHelper.speakIfAuto(`Upgraded building to Level ${newLvl}!`);
+          }
           this.network.upgradeBuilding(x, y);
         }
         break;
+      }
 
-      case 'DEMOLISH':
+      case 'DEMOLISH': {
         if (tile.ownerId !== this.network.firmId) {
           this.showToast('You can only bulldoze your own buildings!', 'error');
         } else {
+          tile.groundBuilding = null;
+          tile.zoning = 'NONE';
+          this.showToast('💣 Bulldozed structure.', 'info');
+          SpeechHelper.speakIfAuto('Bulldozed structure.');
           this.network.demolish(x, y);
         }
         break;
+      }
 
       case 'TAX_ABATEMENT':
         if (tile.ownerId !== this.network.firmId) {

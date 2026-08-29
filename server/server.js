@@ -470,19 +470,51 @@ function handleClientMessage(client, msg) {
       break;
     }
 
+    case 'PROPOSE_BILL': {
+      const { policyId } = payload;
+      const res = politicsEngine.proposeBill(firm.id, policyId);
+      if (res.success) {
+        sendToClient(client, 'ACTION_SUCCESS', { message: `Bill "${res.bill.name}" introduced! Vote in 60 ticks.` });
+      } else {
+        sendToClient(client, 'ACTION_ERROR', { message: res.reason });
+      }
+      break;
+    }
+
+    case 'LOBBY_BILL': {
+      const { rpAmount } = payload;
+      const res = politicsEngine.lobbyBill(firm.id, rpAmount);
+      if (res.success) {
+        sendToClient(client, 'ACTION_SUCCESS', { message: `Lobbied bill! Projected support is now ${res.projectedVote}%.` });
+      } else {
+        sendToClient(client, 'ACTION_ERROR', { message: res.reason });
+      }
+      break;
+    }
+
+    case 'BRIBE_OFFICIAL': {
+      const res = politicsEngine.bribeOfficial(firm.id);
+      if (res.success) {
+        if (res.caught) {
+          sendToClient(client, 'ACTION_ERROR', { message: res.message });
+        } else {
+          sendToClient(client, 'ACTION_SUCCESS', { message: res.message });
+        }
+      } else {
+        sendToClient(client, 'ACTION_ERROR', { message: res.reason });
+      }
+      break;
+    }
+
+    case 'LOBBY_VETO':
     case 'OVERRIDE_VETO': {
       const { districtId } = payload;
-      if (firm.influencePoints < 50) {
-        sendToClient(client, 'ACTION_ERROR', { message: 'Overriding Councilmanic Veto requires 50 Influence Points!' });
-        return;
+      const res = politicsEngine.lobbyCouncilVeto(firm.id, districtId);
+      if (res.success) {
+        sendToClient(client, 'ACTION_SUCCESS', { message: `Councilmanic veto in District ${districtId} lobbied successfully!` });
+      } else {
+        sendToClient(client, 'ACTION_ERROR', { message: res.reason });
       }
-      firm.influencePoints -= 50;
-      gameState.addNews(
-        `COUNCIL OVERRIDE: ${firm.name} spent 50 Influence Points to legally override Councilmanic Veto in District ${districtId}!`,
-        'politics'
-      );
-      gameState.markFirmDirty(firm.id);
-      sendToClient(client, 'ACTION_SUCCESS', { message: `Councilmanic veto in District ${districtId} overridden!` });
       break;
     }
 

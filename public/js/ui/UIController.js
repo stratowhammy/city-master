@@ -912,45 +912,238 @@ class UIController {
 
     const municipal = state.municipal;
     const isMayor = municipal.mayor && municipal.mayor.firmId === myFirm.id;
+    const activeBill = municipal.activeBill;
+    const activePolicies = municipal.activePolicies || [];
+    const bribeRisk = myFirm.bribeAuditRisk || 0;
 
-    const speechPolitics = `City Hall and the 10 Neighborhoods! Each neighborhood has a leader who can say yes or no to big factories or floating cities. You can spend 50 Respect Points to override their rule, or run in elections to become the leader!`;
+    const policiesList = [
+      {
+        id: 'POLICY_COMMERCIAL_BOOM',
+        name: 'Commercial Boom Act',
+        icon: '🏪',
+        badge: '+30% Rent / +15% Land',
+        desc: '+30% Commercial rental income city-wide and +15% commercial land value.',
+        support: 44
+      },
+      {
+        id: 'POLICY_INDUSTRIAL_DEREG',
+        name: 'Industrial Deregulation & Freight Subsidy',
+        icon: '🏭',
+        badge: '+35% Rent / -20% Smoke',
+        desc: '+35% Factory rent income and -20% pollution spread to nearby houses.',
+        support: 38
+      },
+      {
+        id: 'POLICY_RESIDENTIAL_SUBSIDY',
+        name: 'Residential Homestead & Tenant Subsidy',
+        icon: '🏡',
+        badge: '+25% Rent / +20 Joy',
+        desc: '+25% Residential rent income and +20 family happiness/desirability.',
+        support: 48
+      },
+      {
+        id: 'POLICY_TAX_HOLIDAY',
+        name: 'Municipal 10-Year Tax Holiday',
+        icon: '📜',
+        badge: '50% Off Taxes',
+        desc: 'Cuts municipal property tax rate in half (down to 2.25%) for 1,200 ticks.',
+        support: 35
+      },
+      {
+        id: 'POLICY_MARITIME_CORRIDOR',
+        name: 'Maritime Trade Corridor Act',
+        icon: '🚢',
+        badge: '+50% Port Trade',
+        desc: 'Maritime Ports grant +50% trade throughput and rent within 8 tiles.',
+        support: 52
+      },
+      {
+        id: 'POLICY_BOULEVARD_MODERN',
+        name: 'Boulevard & Infrastructure Modernization',
+        icon: '🚧',
+        badge: '+20% Land / Free Roads',
+        desc: '+20% land value along multi-lane avenues with zero public road upkeep.',
+        support: 46
+      }
+    ];
+
+    const speechPolitics = `City Hall Legislative Chamber and Policies! You can choose lucrative policies to pass for your company, lobby councilmembers using Respect Points, or offer secret bribes. Watch the countdown clock to vote, and remember that final tallies have a plus or minus 10 percent uncertainty!`;
 
     let html = `
-      <div class="space-y-4 text-xs">
-        <div class="p-3 rounded-lg bg-slate-800/90 border border-slate-700 space-y-2">
+      <div class="space-y-3.5 text-xs">
+        <!-- Mayoral Summary Header -->
+        <div class="p-3 rounded-xl bg-slate-800/90 border border-slate-700 space-y-1.5">
           <div class="flex justify-between items-center">
-            <span class="font-bold text-slate-200">👑 Town Mayor Office</span>
+            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+              <span>🏛️ City Hall & Legislative Chamber</span>
+            </span>
             <button class="tts-btn" onclick="SpeechHelper.speak('${speechPolitics.replace(/'/g, "\\'")}')" title="Read Aloud">🔊 Read</button>
           </div>
-          <div class="text-[11px] text-slate-300">Mayor: <span class="text-amber-300 font-bold">${isMayor ? 'YOU ARE MAYOR!' : municipal.mayor.name}</span></div>
-          <div class="text-[11px] text-slate-300">Town Treasury: <span class="text-emerald-400 font-bold">$${municipal.treasury.toLocaleString()}</span></div>
+          <div class="flex justify-between text-[11px] text-slate-300">
+            <span>Mayor: <strong class="text-amber-300">${isMayor ? 'YOU ARE MAYOR! 👑' : municipal.mayor.name}</strong></span>
+            <span>Treasury: <strong class="text-emerald-400">$${municipal.treasury.toLocaleString()}</strong></span>
+          </div>
+          <div class="text-[10px] text-slate-400 flex justify-between">
+            <span>Next Election: <strong>${Math.max(0, municipal.nextElectionTick - state.tick)} ticks</strong></span>
+            <span>Your Respect Points: <strong class="text-amber-400 font-bold">${myFirm.influencePoints} ⭐</strong></span>
+          </div>
         </div>
 
-        <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">10 Neighborhood Council Leaders</div>
-        <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-    `;
-
-    for (const seat of municipal.councilSeats) {
-      const isMySeat = (seat.holderFirmId === myFirm.id);
-      const seatSpeech = `${seat.districtName}. Leader is ${seat.holderName}, personality is ${seat.trait}.`;
-
-      html += `
-        <div class="p-2 rounded bg-slate-900/80 border ${isMySeat ? 'border-emerald-500' : 'border-slate-800'} flex justify-between items-center">
-          <div>
-            <div class="font-semibold text-slate-200 flex items-center gap-1">
-              <span>${seat.districtName}</span>
-              <button class="tts-btn-small" onclick="SpeechHelper.speak('${seatSpeech.replace(/'/g, "\\'")}')">🔊</button>
+        <!-- 1. Enacted Special Laws / Policies -->
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div class="font-bold text-slate-200 text-xs flex justify-between items-center">
+            <span>📜 Active City Policies Enacted (${activePolicies.length})</span>
+          </div>
+          ${activePolicies.length === 0 ? `
+            <div class="text-[11px] text-slate-500 italic py-1">No special policies currently in effect. Propose and pass a bill below to boost your company!</div>
+          ` : `
+            <div class="space-y-1.5">
+              ${activePolicies.map(p => {
+                const rem = Math.max(0, p.expiresTick - state.tick);
+                return `
+                  <div class="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/50 flex justify-between items-center">
+                    <div>
+                      <div class="font-bold text-emerald-300 text-xs flex items-center gap-1">
+                        <span>${p.icon || '📜'} ${p.name}</span>
+                      </div>
+                      <div class="text-[10px] text-slate-300 mt-0.5">${p.description}</div>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-900 text-emerald-200 font-bold shrink-0 ml-2">⏳ ${rem}t left</span>
+                  </div>
+                `;
+              }).join('')}
             </div>
-            <div class="text-[10px] text-slate-400">${seat.holderName} (${seat.trait})</div>
+          `}
+        </div>
+
+        <!-- 2. Legislative Bill on the Floor (Active Voting Session) OR Propose Bill -->
+        ${activeBill ? `
+          <!-- Active Bill Floor Session -->
+          <div class="p-3.5 rounded-xl bg-indigo-950/60 border-2 border-indigo-500/80 space-y-3 shadow-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">🗳️ Floor Debate & Voting Session</span>
+                <div class="text-sm font-bold text-white mt-0.5 flex items-center gap-1.5">
+                  <span>${activeBill.icon || '📜'} ${activeBill.name}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 block">Countdown to Vote</span>
+                <span class="text-xs font-mono font-extrabold text-amber-300 animate-pulse">⏱️ ${Math.max(0, activeBill.voteCastTick - state.tick)} Ticks</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-300 bg-slate-900/70 p-2 rounded border border-slate-800">
+              ${activeBill.description}
+            </div>
+
+            <!-- Expected Vote Gauge / Slider -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-bold">
+                <span class="text-slate-300">Expected Vote Support:</span>
+                <span class="${activeBill.projectedVote >= 50 ? 'text-emerald-400' : 'text-rose-400'} font-extrabold text-sm">${activeBill.projectedVote}% YES</span>
+              </div>
+              <div class="relative w-full h-4 bg-slate-950 rounded-full overflow-hidden border border-slate-700">
+                <div class="h-full transition-all duration-300 ${activeBill.projectedVote >= 50 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-rose-500 to-amber-500'}" style="width: ${activeBill.projectedVote}%"></div>
+                <!-- 50% Passing Marker Line -->
+                <div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white shadow-sm z-10"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400 font-semibold pt-0.5">
+                <span>0%</span>
+                <span class="text-amber-300">⚖️ 50% (Pass Mark)</span>
+                <span>100%</span>
+              </div>
+              <div class="text-[10px] text-slate-400 italic">
+                🎲 <strong>Vote Uncertainty:</strong> Actual vote deviates by ±10% when countdown timer expires!
+              </div>
+            </div>
+
+            <!-- Lobbying Action with Respect Points Input -->
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-2">
+              <div class="font-bold text-slate-200 text-[11px] flex justify-between items-center">
+                <span>🏛️ Lobby Council with Respect Points</span>
+                <span class="text-[10px] text-amber-400 font-normal">You have: ${myFirm.influencePoints} ⭐</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="number" id="lobby-rp-input" value="20" min="1" max="${myFirm.influencePoints}" class="w-24 bg-slate-800 border border-slate-700 text-white font-bold text-xs px-2 py-1.5 rounded focus:outline-none focus:border-sky-500">
+                <button onclick="window.ui.lobbyBill(document.getElementById('lobby-rp-input').value)" class="flex-1 py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow transition-all">
+                  🏛️ Spend RP to Lobby (+2.5% / 5⭐)
+                </button>
+              </div>
+            </div>
+
+            <!-- Cash Bribery Action -->
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-slate-200 text-[11px]">💰 Offer Secret Political Bribe</span>
+                <span class="text-[10px] text-slate-400">Cash: <strong class="text-emerald-400">$${Math.round(myFirm.cash).toLocaleString()}</strong></span>
+              </div>
+              <button onclick="window.ui.bribeOfficial()" class="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition-all">
+                💰 Offer $25,000 Bribe (+12% Vote Support)
+              </button>
+              <div class="flex justify-between items-center text-[10px] pt-1 border-t border-slate-800">
+                <span>Current Investigation Risk: <strong class="${bribeRisk > 25 ? 'text-rose-400' : 'text-amber-400'} font-bold">${bribeRisk.toFixed(1)}%</strong></span>
+                <span class="text-slate-500">Decays 1% / 10,000 ticks</span>
+              </div>
+              <div class="text-[9px] text-rose-300/80 leading-tight">
+                ⚠️ Each bribe increases chances of being caught by +5%. If investigated, you will be fined $50,000 and lose 30 Respect Points!
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-1">
-            ${isMySeat ? '<span class="text-[10px] font-bold text-emerald-400">YOUR SEAT</span>' : `<button onclick="window.ui.overrideVeto(${seat.districtId})" class="py-1 px-2 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold" title="Spend 50 Respect Points to change leader's mind">Override (50 ⭐)</button>`}
+        ` : `
+          <!-- Propose New Policy Bill Deck -->
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+            <div class="font-bold text-slate-200 text-xs flex justify-between items-center">
+              <span>📜 Propose a New Policy Bill to Council</span>
+              <span class="text-[10px] text-slate-400">Floor Vote: 60 Ticks</span>
+            </div>
+            <div class="text-[11px] text-slate-300 leading-tight">
+              Select a legislative policy to advance your development and maximize company profits:
+            </div>
+            <select id="select-policy-bill" class="w-full bg-slate-800 text-white text-xs font-semibold p-2 rounded-lg border border-slate-700 focus:outline-none focus:border-sky-500">
+              ${policiesList.map(p => `
+                <option value="${p.id}">${p.icon} ${p.name} [${p.badge}] (Base Support: ${p.support}%)</option>
+              `).join('')}
+            </select>
+            <button onclick="window.ui.proposeBill(document.getElementById('select-policy-bill').value)" class="w-full py-2 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all">
+              📜 Introduce Policy Bill to City Council Floor
+            </button>
+          </div>
+        `}
+
+        <!-- 3. 10 Neighborhood Council Leaders (Lobbying Vetoes) -->
+        <div class="space-y-1.5">
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider flex justify-between items-center">
+            <span>🏛️ 10 Neighborhood Council Leaders</span>
+            <span class="text-[10px] text-slate-400 font-normal">Lobby = 50 ⭐</span>
+          </div>
+          <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+            ${municipal.councilSeats.map(seat => {
+              const isMySeat = (seat.holderFirmId === myFirm.id);
+              const seatSpeech = `${seat.districtName}. Leader is ${seat.holderName}, personality is ${seat.trait}.`;
+              return `
+                <div class="p-2 rounded-lg bg-slate-900/80 border ${isMySeat ? 'border-emerald-500' : 'border-slate-800'} flex justify-between items-center">
+                  <div>
+                    <div class="font-semibold text-slate-200 flex items-center gap-1">
+                      <span>${seat.districtName}</span>
+                      <button class="tts-btn-small" onclick="SpeechHelper.speak('${seatSpeech.replace(/'/g, "\\'")}')">🔊</button>
+                    </div>
+                    <div class="text-[10px] text-slate-400">${seat.holderName} (${seat.trait})</div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    ${isMySeat ? '<span class="text-[10px] font-bold text-emerald-400">YOUR SEAT</span>' : `
+                      <button onclick="window.ui.lobbyCouncilVeto(${seat.districtId})" class="py-1 px-2.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold shadow transition-all" title="Spend 50 Respect Points to lobby the leader">
+                        🏛️ Lobby (50 ⭐)
+                      </button>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
-      `;
-    }
-
-    html += `</div></div>`;
+      </div>
+    `;
     el.innerHTML = html;
   }
 
@@ -1644,14 +1837,56 @@ class UIController {
     this.network.repayMarginLoan(amount);
   }
 
-  overrideVeto(districtId) {
+  lobbyCouncilVeto(districtId) {
     const firm = this.network.gameState.firms.get(this.network.firmId);
     if (firm && firm.influencePoints < 50) {
-      this.showToast('Need 50 Respect Points (⭐) to override a neighborhood veto!', 'error');
+      this.showToast('Need 50 Respect Points (⭐) to lobby a neighborhood leader!', 'error');
       SpeechHelper.speakIfAuto('You need 50 Respect Points to change the neighborhood leader mind.');
       return;
     }
-    this.network.overrideVeto(districtId);
+    this.network.lobbyCouncilVeto(districtId);
+  }
+
+  overrideVeto(districtId) {
+    this.lobbyCouncilVeto(districtId);
+  }
+
+  proposeBill(policyId) {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    if (this.network.gameState.municipal.activeBill) {
+      this.showToast('A bill is already being voted on!', 'error');
+      return;
+    }
+    this.network.proposeBill(policyId);
+    this.showToast('📜 Bill submitted to City Hall! Legislative floor debate initiated.', 'success');
+    SpeechHelper.speakIfAuto('You introduced a new policy bill to the City Council.');
+  }
+
+  lobbyBill(rpAmount) {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    const rp = parseInt(rpAmount, 10);
+    if (isNaN(rp) || rp <= 0) {
+      this.showToast('Enter a valid integer of Respect Points!', 'error');
+      return;
+    }
+    if (!firm || firm.influencePoints < rp) {
+      this.showToast(`Not enough Respect Points! You only have ${firm ? firm.influencePoints : 0} ⭐.`, 'error');
+      SpeechHelper.speakIfAuto('You do not have enough Respect Points.');
+      return;
+    }
+    this.network.lobbyBill(rp);
+    this.showToast(`🏛️ Lobbied bill with ${rp} Respect Points! Swaying council votes...`, 'success');
+    SpeechHelper.speakIfAuto(`Lobbied the bill with ${rp} Respect Points.`);
+  }
+
+  bribeOfficial() {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    if (!firm || firm.cash < 25000) {
+      this.showToast('Need $25,000 in cash to offer a political bribe!', 'error');
+      SpeechHelper.speakIfAuto('You do not have enough cash to offer a bribe.');
+      return;
+    }
+    this.network.bribeOfficial();
   }
 
   buyRes(key, amt) {

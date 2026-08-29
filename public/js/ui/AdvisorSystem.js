@@ -86,7 +86,7 @@ class AdvisorSystem {
       reason: vetoReason,
       explanation: 'In our city, each neighborhood council leader has the power to protect their neighborhood scale. If they say no to a big factory or sky city, you have three friendly ways to solve it:',
       solutions: [
-        '1. ⭐ Spend 50 Respect Points in City Hall to override their rule.',
+        '1. ⭐ Spend 50 Respect Points in City Hall to lobby their rule.',
         '2. ⚖️ Send a request to the 5-member City Planning Board.',
         '3. 🗳️ Run in the next town election to become the neighborhood leader yourself!'
       ]

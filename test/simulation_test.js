@@ -139,6 +139,40 @@ politics.processZBAQueue();
 assert(['APPROVED', 'DENIED'].includes(variance.status), 'ZBA must resolve variance application');
 console.log(`✅ Subsystem 7B: Zoning Board of Adjustment (ZBA) 5-Member Review Passed (Status: ${variance.status})`);
 
+// 7C. Legislative Policy Proposal, Respect Points Lobbying & Cash Bribery
+const billRes = politics.proposeBill('firm_player_1', 'POLICY_COMMERCIAL_BOOM');
+assert.strictEqual(billRes.success, true, 'Bill proposal must succeed');
+assert.strictEqual(state.municipal.activeBill.policyId, 'POLICY_COMMERCIAL_BOOM');
+
+const initialRP = state.firms.get('firm_player_1').influencePoints;
+const lobbyRes = politics.lobbyBill('firm_player_1', 20);
+assert.strictEqual(lobbyRes.success, true, 'RP lobbying must succeed');
+assert.strictEqual(state.firms.get('firm_player_1').influencePoints, initialRP - 20, 'RP must be deducted');
+assert(state.municipal.activeBill.projectedVote > state.municipal.activeBill.baseSupport, 'Projected vote must increase');
+
+const playerFirmObj = state.firms.get('firm_player_1');
+playerFirmObj.bribeAuditRisk = 0;
+const bribeRes = politics.bribeOfficial('firm_player_1');
+assert.strictEqual(bribeRes.success, true, 'Bribe action must execute');
+assert(playerFirmObj.bribeAuditRisk >= 5, 'Bribe must increase audit risk by 5%');
+
+// Test 1% decay per 10,000 ticks
+const preDecayRisk = playerFirmObj.bribeAuditRisk;
+for (let t = 0; t < 10000; t++) {
+  politics.decayBriberyRisk();
+}
+assert(playerFirmObj.bribeAuditRisk < preDecayRisk, 'Risk must decay over 10,000 ticks');
+assert(Math.abs(preDecayRisk - playerFirmObj.bribeAuditRisk - 1.0) < 0.05, 'Risk must decay by ~1% over 10,000 ticks');
+console.log('✅ Subsystem 7C: Legislative Policy Proposal, RP Lobbying, Bribes & 1%/10k Ticks Risk Decay Passed');
+
+// 7D. Stochastic ±10% Voting Resolution & Enactment
+state.municipal.activeBill.voteCastTick = state.tick;
+state.municipal.activeBill.projectedVote = 85; // High enough to guarantee pass even with -10% uncertainty
+politics.processActiveBillVote();
+assert.strictEqual(state.municipal.activePolicies.length, 1, 'Passed bill must enact policy in activePolicies');
+assert.strictEqual(state.municipal.activePolicies[0].id, 'POLICY_COMMERCIAL_BOOM');
+console.log('✅ Subsystem 7D: Stochastic ±10% Voting Resolution & Policy Enactment Passed');
+
 // 8. Macroeconomics & Foreign Export Controls
 const macro = new MacroeconomicsEngine(state);
 macro.updateResourceSpotPrices();

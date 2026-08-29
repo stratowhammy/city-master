@@ -170,7 +170,11 @@ class NetworkClient {
   constructArcology(x, y, unionBuilt) { this.send('CONSTRUCT_ARCOLOGY', { x, y, unionBuilt }); }
   demolish(x, y) { this.send('DEMOLISH', { x, y }); }
   submitZBAVariance(x, y, requestedZoning, proposedLevel) { this.send('ZBA_VARIANCE_REQUEST', { x, y, requestedZoning, proposedLevel }); }
-  overrideVeto(districtId) { this.send('OVERRIDE_VETO', { districtId }); }
+  overrideVeto(districtId) { this.send('LOBBY_VETO', { districtId }); }
+  lobbyCouncilVeto(districtId) { this.send('LOBBY_VETO', { districtId }); }
+  proposeBill(policyId) { this.send('PROPOSE_BILL', { policyId }); }
+  lobbyBill(rpAmount) { this.send('LOBBY_BILL', { rpAmount }); }
+  bribeOfficial() { this.send('BRIBE_OFFICIAL'); }
   grantTaxAbatement(x, y, isUnionPledged) { this.send('GRANT_TAX_ABATEMENT', { x, y, isUnionPledged }); }
   setTaxRates(propertyTaxRate, wageTaxRate) { this.send('SET_TAX_RATES', { propertyTaxRate, wageTaxRate }); }
   triggerAudit(targetFirmId) { this.send('TRIGGER_AUDIT', { targetFirmId }); }

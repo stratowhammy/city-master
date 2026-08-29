@@ -164,7 +164,7 @@ class TutorialSystem {
         speech: 'Finally, visit City Hall! Each of the 10 neighborhoods has a council leader with the power to say yes or no to big buildings. You can spend Respect Points to change their mind, or run for Mayor yourself in the next election! You are now ready to build your dream metropolis!',
         body: `
           <p>🏛️ <strong>Neighborhood Leader Rule:</strong> District leaders can veto big factories or sky cities in their area.</p>
-          <p class="mt-1">⭐ <strong>Respect Points:</strong> Earned by helping the city; spend 50 points to override any neighborhood rule!</p>
+          <p>⭐ <strong>Respect Points:</strong> Earned by helping the city; spend 50 points to lobby any neighborhood rule!</p>
           <p class="mt-1">👑 <strong>Run for Mayor:</strong> Win the town election to control taxes and lead peace treaties!</p>
           <div class="p-3 rounded bg-emerald-950 border border-emerald-500 text-center font-bold text-emerald-300 mt-3">
             🎉 Congratulations! You completed the tutorial and earned $50,000 + 50 Respect Points!

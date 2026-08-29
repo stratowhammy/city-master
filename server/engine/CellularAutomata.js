@@ -117,29 +117,37 @@ class CellularAutomata {
         tile.landValue = Math.round(tile.basePrice * (tile.desirability / 50) * distMod);
 
         // Ground building simulation
+        // Active Legislative Policies Check
+        const activePolicies = (this.gameState.municipal && this.gameState.municipal.activePolicies) || [];
+        const hasPolicy = (id) => activePolicies.some(p => p.id === id);
+        const commBonusMult = hasPolicy('POLICY_COMMERCIAL_BOOM') ? 1.30 : 1.0;
+        const indBonusMult = hasPolicy('POLICY_INDUSTRIAL_DEREG') ? 1.35 : 1.0;
+        const resBonusMult = hasPolicy('POLICY_RESIDENTIAL_SUBSIDY') ? 1.25 : 1.0;
+        const maritimeExtraPort = hasPolicy('POLICY_MARITIME_CORRIDOR') ? (portBonus * 0.5) : 0;
+        const effectivePortBonus = portBonus + maritimeExtraPort;
+
         if (tile.groundBuilding && tile.groundBuilding.type !== 'ROAD' && tile.groundBuilding.type !== 'PIER') {
           const gb = tile.groundBuilding;
           if (gb.type === 'RESIDENTIAL') {
-            // Residential hurt by industrial pollution and heavy traffic noise
+            const desBonus = hasPolicy('POLICY_RESIDENTIAL_SUBSIDY') ? 20 : 0;
+            const effDesirability = Math.min(100, tile.desirability + desBonus);
             const penalty = tile.pollution + (trafficNoise * 0.5);
             if (penalty > 35) {
-              gb.rentIncome = Math.max(5, Math.round((gb.level * 80) * Math.max(0.1, (100 - penalty) / 100)));
+              gb.rentIncome = Math.max(5, Math.round((gb.level * 80 * resBonusMult) * Math.max(0.1, (100 - penalty) / 100)));
               gb.health = Math.max(20, gb.health - 0.2);
             } else {
-              gb.rentIncome = Math.round(gb.level * 85 * (tile.desirability / 50));
+              gb.rentIncome = Math.round(gb.level * 85 * resBonusMult * (effDesirability / 50));
               gb.health = Math.min(100, gb.health + 0.1);
             }
           } else if (gb.type === 'COMMERCIAL') {
-            // Commercial boosted by nearby labor, high-capacity road foot traffic, and port commerce!
             const laborFactor = Math.min(1.5, Math.max(0.4, nearbyLabor / 30));
-            const trafficMultiplier = 1.0 + roadCommSynergy + (portBonus * 0.5);
-            gb.rentIncome = Math.round(gb.level * 110 * laborFactor * trafficMultiplier * (tile.desirability / 50));
+            const trafficMultiplier = 1.0 + roadCommSynergy + (effectivePortBonus * 0.5);
+            gb.rentIncome = Math.round(gb.level * 110 * commBonusMult * laborFactor * trafficMultiplier * (tile.desirability / 50));
           } else if (gb.type === 'INDUSTRIAL') {
-            // Industrial boosted by port throughput and arterial freight links
-            const industrialMultiplier = 1.0 + (portBonus * 0.6) + (roadCommSynergy * 0.3);
-            gb.rentIncome = Math.round(gb.level * 140 * industrialMultiplier);
+            const industrialMultiplier = 1.0 + (effectivePortBonus * 0.6) + (roadCommSynergy * 0.3);
+            gb.rentIncome = Math.round(gb.level * 140 * indBonusMult * industrialMultiplier);
           } else if (gb.type === 'PORT') {
-            gb.rentIncome = Math.round(350 * (1.0 + portBonus));
+            gb.rentIncome = Math.round(350 * (1.0 + effectivePortBonus));
           }
         }
       }

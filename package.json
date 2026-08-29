@@ -1,0 +1,22 @@
+{
+  "name": "city-master",
+  "version": "1.0.0",
+  "description": "Multiplayer Isometric City-Building Simulation with Antigravity Physics, Municipal Politics, and Financial Engineering",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node test/simulation_test.js"
+  },
+  "keywords": [
+    "isometric",
+    "city-builder",
+    "multiplayer",
+    "mmo",
+    "antigravity",
+    "colyseus",
+    "simulation",
+    "education"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "MIT"
+}

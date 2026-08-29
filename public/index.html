@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City Master: 5th-Grade MMO Isometric Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-hidden font-sans">
+
+  <!-- Main Isometric Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Top HUD Bar with Text-to-Speech (🔊) Support -->
+  <header class="hud-bar">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-black text-sm shadow-md">
+        🏙️
+      </div>
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>Your Company</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Your company name is Pinnacle Metro!')" title="Read Aloud">🔊</button>
+        </div>
+        <div class="hud-value text-sky-400 text-sm">Pinnacle Metro</div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-5">
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>💵 Cash Money</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Liquid cash in hand: ' + document.getElementById('hud-cash').innerText)" title="Read Aloud">🔊</button>
+        </div>
+        <div id="hud-cash" class="hud-value text-emerald-400">$150,000</div>
+      </div>
+
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>🏷️ Slice Value</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Company slice value: ' + document.getElementById('hud-stock-price').innerText)" title="Read Aloud">🔊</button>
+        </div>
+        <div id="hud-stock-price" class="hud-value text-cyan-300">$15.00</div>
+      </div>
+
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>💎 Total Wealth</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Total company wealth: ' + document.getElementById('hud-net-worth').innerText)" title="Read Aloud">🔊</button>
+        </div>
+        <div id="hud-net-worth" class="hud-value text-indigo-300">$150,000</div>
+      </div>
+
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>🛡️ Safe Money Meter</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Safe Money Meter: ' + document.getElementById('hud-margin-badge').innerText + '. Ratio: ' + document.getElementById('hud-margin-ratio').innerText)" title="Read Aloud">🔊</button>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span id="hud-margin-ratio" class="hud-value text-emerald-400">100%</span>
+          <span id="hud-margin-badge" class="status-badge bg-emerald-500">SAFE 🛡️</span>
+        </div>
+      </div>
+
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>⭐ Respect Points</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('You have ' + document.getElementById('hud-influence').innerText + ' to use for city rules and votes!')" title="Read Aloud">🔊</button>
+        </div>
+        <div id="hud-influence" class="hud-value text-purple-400">80 ⭐</div>
+      </div>
+
+      <div class="hud-item">
+        <div class="hud-label">
+          <span>👑 Town Mayor</span>
+          <button class="tts-btn-small" onclick="SpeechHelper.speak('Current Town Mayor is: ' + document.getElementById('hud-mayor-name').innerText)" title="Read Aloud">🔊</button>
+        </div>
+        <div id="hud-mayor-name" class="hud-value text-amber-300 text-xs">Reginald Sterling</div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button onclick="window.tutorial && window.tutorial.start()" class="py-1.5 px-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all">
+        <span>🎓 How to Play Tutorial</span>
+      </button>
+      <div id="hud-tick-count" class="text-xs font-mono text-slate-400 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
+        Tick 0
+      </div>
+    </div>
+  </header>
+
+  <!-- Layer Overlays Bar -->
+  <nav class="overlays-bar">
+    <button class="overlay-btn active" data-overlay="NORMAL">Normal 🗺️</button>
+    <button class="overlay-btn" data-overlay="ZONING">Zones 🎨</button>
+    <button class="overlay-btn text-rose-400 font-bold" data-overlay="POLLUTION">Dirty Smoke 🌫️</button>
+    <button class="overlay-btn text-emerald-400 font-bold" data-overlay="LAND_VALUE">Happiness ⭐</button>
+    <button class="overlay-btn" data-overlay="DISTRICTS">10 Neighborhoods 🏛️</button>
+    <button class="overlay-btn text-cyan-400 font-bold" data-overlay="ANTIGRAVITY">🛸 Sky Cities</button>
+  </nav>
+
+  <!-- Tile Inspector Card -->
+  <aside class="inspector-card">
+    <div class="flex justify-between items-center mb-1">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tile Inspector</div>
+    </div>
+    <div id="tile-inspector-content">
+      <div class="text-xs text-slate-400 italic">Click on any tile on the map to see its price, happiness, and buildings!</div>
+    </div>
+  </aside>
+
+  <!-- Bottom Construction Toolbar -->
+  <footer class="bottom-toolbar">
+    <div class="tool-group">
+      <button class="tool-btn active" data-tool="INSPECT" title="Look around the map">🔍 Look</button>
+      <button class="tool-btn" data-tool="BUY_LAND" title="Buy empty land to build on">🏷️ Buy Land</button>
+      <button class="tool-btn" data-tool="BUILD_RESIDENTIAL" title="Build a neighborhood house">🏠 House</button>
+      <button class="tool-btn" data-tool="BUILD_COMMERCIAL" title="Build a neighborhood store">🏢 Store</button>
+      <button class="tool-btn" data-tool="BUILD_INDUSTRIAL" title="Build a workshop factory">🏭 Factory</button>
+      <button class="tool-btn" data-tool="UPGRADE" title="Make your building bigger and taller">⬆️ Upgrade</button>
+      <button class="tool-btn arcology-btn" data-tool="BUILD_ARCOLOGY" title="Launch a Floating Sky City into the air!">🛸 Sky City</button>
+      <button class="tool-btn text-rose-400" data-tool="DEMOLISH" title="Bulldoze a building">💣 Bulldoze</button>
+      <button class="tool-btn text-emerald-400" data-tool="TAX_ABATEMENT" title="Get 10 whole years of free property taxes!">📜 Free Taxes</button>
+      <button class="tool-btn text-amber-400" data-tool="ZBA_VARIANCE" title="Ask City Planning Board for building permission">⚖️ Ask Board</button>
+    </div>
+
+    <div class="flex items-center gap-4 border-l border-slate-700 pl-4">
+      <label class="flex items-center gap-1.5 text-xs font-bold text-slate-200 cursor-pointer" title="Helper workers build 3x faster and get 10 years of free taxes!">
+        <input type="checkbox" id="toggle-union-labor" checked class="accent-emerald-500 rounded">
+        <span>👷‍♂️ Helper Workers</span>
+      </label>
+
+      <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded border border-slate-800 text-[10px]">
+        <button class="speed-btn active px-1.5 py-0.5 rounded text-slate-300 hover:text-white" data-speed="1.0">1x</button>
+        <button class="speed-btn px-1.5 py-0.5 rounded text-slate-300 hover:text-white" data-speed="2.0">2x</button>
+        <button class="speed-btn px-1.5 py-0.5 rounded text-slate-300 hover:text-white" data-speed="5.0">5x</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Sidebar Dashboard -->
+  <aside class="sidebar-panel">
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="STOCKS">📈 Slices</button>
+      <button class="tab-btn" data-tab="MARGIN">🏦 Bank</button>
+      <button class="tab-btn" data-tab="POLITICS">🏛️ City Hall</button>
+      <button class="tab-btn" data-tab="RESOURCES">🌐 Materials</button>
+      <button class="tab-btn" data-tab="ADVISORS">🎓 Helpers</button>
+    </div>
+
+    <div class="sidebar-content">
+      <div id="tab-stocks" class="tab-content"></div>
+      <div id="tab-margin" class="tab-content hidden"></div>
+      <div id="tab-politics" class="tab-content hidden"></div>
+      <div id="tab-resources" class="tab-content hidden"></div>
+      <div id="tab-advisors" class="tab-content hidden">
+        <div class="mt-4 p-3 rounded bg-slate-800/90 border border-slate-700">
+          <div class="text-xs font-bold text-slate-300 uppercase mb-2">Game Challenge Missions</div>
+          <div class="grid grid-cols-1 gap-1.5">
+            <button class="scenario-btn p-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs" data-scenario="ANTIGRAVITY_BOOM">🚀 Mission 1: Floating Sky City Race</button>
+            <button class="scenario-btn p-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs" data-scenario="UNION_CRISIS">⚡ Mission 2: Help the Workers Strike</button>
+            <button class="scenario-btn p-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs" data-scenario="MARGIN_TEST">⚠️ Mission 3: Fix the Bank Debt</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rolling Municipal News Feed with Speaker Buttons -->
+    <div class="p-2 bg-slate-900 border-t border-slate-800">
+      <div class="flex justify-between items-center mb-1">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">🗞️ Town Newspaper & News</div>
+      </div>
+      <div id="news-ticker-content" class="max-h-24 overflow-y-auto"></div>
+    </div>
+  </aside>
+
+  <!-- Actionable Margin Call Teaching Modal -->
+  <div id="modal-margin-call" class="modal-overlay hidden">
+    <div class="modal-card border-rose-500">
+      <div class="flex justify-between items-center mb-2">
+        <div id="margin-modal-title" class="text-base font-bold text-rose-400"></div>
+        <button id="margin-modal-tts" class="tts-btn" title="Read Aloud">🔊 Read Aloud</button>
+      </div>
+      <div id="margin-modal-explanation" class="text-xs text-slate-300 leading-relaxed mb-4"></div>
+      <div class="text-xs font-bold text-emerald-400 uppercase mb-2">Pick an Easy Action to Fix It:</div>
+      <div id="margin-modal-options" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Neighborhood Veto Modal -->
+  <div id="modal-veto" class="modal-overlay hidden">
+    <div class="modal-card border-amber-500">
+      <div class="flex justify-between items-center mb-2">
+        <div id="veto-modal-title" class="text-base font-bold text-amber-400"></div>
+        <button id="veto-modal-tts" class="tts-btn" title="Read Aloud">🔊 Read Aloud</button>
+      </div>
+      <div id="veto-modal-reason" class="p-2.5 rounded bg-slate-900 text-xs font-semibold text-rose-300 mb-3 border border-slate-800"></div>
+      <div id="veto-modal-explanation" class="text-xs text-slate-300 leading-relaxed mb-3"></div>
+      <div class="text-xs font-bold text-slate-400 uppercase mb-1">How You Can Solve It:</div>
+      <div id="veto-modal-solutions" class="text-xs text-emerald-300 space-y-1 mb-4"></div>
+      <button onclick="document.getElementById('modal-veto').classList.add('hidden'); SpeechHelper.stop();" class="w-full py-2 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs">Got It!</button>
+    </div>
+  </div>
+
+  <!-- Client Application Scripts -->
+  <script src="js/ui/SpeechHelper.js"></script>
+  <script src="js/engine/TileAssets.js"></script>
+  <script src="js/engine/IsometricRenderer.js"></script>
+  <script src="js/ui/AdvisorSystem.js"></script>
+  <script src="js/ui/TutorialSystem.js"></script>
+  <script src="js/engine/NetworkClient.js"></script>
+  <script src="js/ui/UIController.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -192,6 +192,40 @@ class UIController {
     if (settingsCloseBtn) settingsCloseBtn.addEventListener('click', closeSettings);
     if (settingsSaveBtn) settingsSaveBtn.addEventListener('click', closeSettings);
 
+    // Profile & Company Registration Modal
+    const modalProfile = document.getElementById('modal-profile');
+    const btnOpenProfile = document.getElementById('btn-open-profile');
+    const profileCloseBtn = document.getElementById('profile-close-btn');
+    const profileSaveBtn = document.getElementById('profile-save-btn');
+    const profileNameInput = document.getElementById('profile-name-input');
+    const profileColorInput = document.getElementById('profile-color-input');
+
+    if (btnOpenProfile) {
+      btnOpenProfile.addEventListener('click', () => {
+        const myFirm = this.network.gameState && this.network.gameState.firms && this.network.gameState.firms.get(this.network.firmId);
+        if (myFirm && profileNameInput) profileNameInput.value = myFirm.name;
+        if (myFirm && profileColorInput) profileColorInput.value = myFirm.color || '#3b82f6';
+        if (modalProfile) modalProfile.classList.remove('hidden');
+      });
+    }
+
+    if (profileCloseBtn) {
+      profileCloseBtn.addEventListener('click', () => {
+        if (modalProfile) modalProfile.classList.add('hidden');
+      });
+    }
+
+    if (profileSaveBtn) {
+      profileSaveBtn.addEventListener('click', () => {
+        const name = (profileNameInput && profileNameInput.value.trim()) || 'Custom Tycoon Co';
+        const color = (profileColorInput && profileColorInput.value) || '#3b82f6';
+        this.network.createProfile(name, color);
+        if (modalProfile) modalProfile.classList.add('hidden');
+        this.showToast(`🏢 Company Profile "${name}" registered on the Stock Exchange!`, 'success');
+        SpeechHelper.speakIfAuto(`Profile ${name} registered on the stock exchange.`);
+      });
+    }
+
     // Sidebar tab buttons
     const tabBtns = document.querySelectorAll('.tab-btn');
     tabBtns.forEach(btn => {
@@ -762,19 +796,18 @@ class UIController {
         </div>
 
         <div class="flex justify-between items-center">
-          <span class="text-xs font-bold text-slate-300 uppercase">🏢 City Builders & Stocks Available</span>
-          <span class="text-[10px] text-slate-400">Click any company to graph</span>
+          <span class="text-xs font-bold text-slate-300 uppercase">🏢 City Stock Exchange (${firmsArray.length} Companies)</span>
+          <span class="text-[10px] text-slate-400">Click to graph</span>
         </div>
         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
     `;
-
-    const firmsArray = Array.from(state.firms.values()).sort((a, b) => b.netWorth - a.netWorth);
 
     for (const f of firmsArray) {
       const owned = (myFirm.shareHoldings && myFirm.shareHoldings[f.id]) || 0;
       const votingPercent = ((owned / (f.stock.totalShares || 100000)) * 100).toFixed(1);
       const isMe = (f.id === myFirm.id);
-      const fSpeech = `${f.name}. Stock price: ${f.stock.price.toFixed(2)} dollars. You own ${owned} shares, which is ${votingPercent} percent.`;
+      const isTraded = (f.isActivelyTraded !== false);
+      const fSpeech = `${f.name}. Stock price: ${f.stock.price.toFixed(2)} dollars. ${isTraded ? 'Actively traded on exchange.' : 'Awaiting property development to unlock active trading.'} You own ${owned} shares, which is ${votingPercent} percent.`;
 
       html += `
         <div class="p-2.5 rounded bg-slate-900/80 border ${isMe ? 'border-sky-500' : 'border-slate-800'} hover:border-slate-600 transition-all flex flex-col gap-1.5">
@@ -784,16 +817,25 @@ class UIController {
               <span class="hover:text-sky-300 transition-colors">${f.name}</span> ${isMe ? '<span class="text-[10px] text-sky-400 font-bold">(YOU)</span>' : ''}
               <button class="tts-btn-small" onclick="event.stopPropagation(); SpeechHelper.speak('${fSpeech.replace(/'/g, "\\'")}')">🔊</button>
             </div>
-            <div class="text-xs font-bold text-sky-400">$${f.stock.price.toFixed(2)}</div>
+            <div class="text-right">
+              <div class="text-xs font-bold text-sky-400">$${f.stock.price.toFixed(2)}</div>
+              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${isTraded ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+                ${isTraded ? '🟢 Active' : '⏳ Awaiting Dev'}
+              </span>
+            </div>
           </div>
           <div class="flex justify-between items-center text-[11px] text-slate-400">
             <span>You Own: <strong class="text-amber-400">${owned.toLocaleString()} shares (${votingPercent}%)</strong></span>
             <button onclick="window.ui.openStockDrawer('${f.id}')" class="text-[10px] font-bold text-sky-400 hover:text-sky-300 underline">📊 500t Graph</button>
           </div>
           <div class="flex gap-1.5 mt-1">
-            <button onclick="window.ui.tradeStock('${f.id}', 100, true)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">Buy 100</button>
-            <button onclick="window.ui.tradeStock('${f.id}', 100, false)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors" ${owned < 100 ? 'disabled' : ''}>Sell 100</button>
-            ${!isMe ? `<button onclick="window.ui.takeover('${f.id}')" class="py-1 px-2 text-[10px] font-bold rounded ${votingPercent > 50 ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}" title="Buy whole company when you own over 50%">Take Over</button>` : ''}
+            ${isTraded ? `
+              <button onclick="window.ui.tradeStock('${f.id}', 100, true)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">Buy 100</button>
+              <button onclick="window.ui.tradeStock('${f.id}', 100, false)" class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors" ${owned < 100 ? 'disabled' : ''}>Sell 100</button>
+            ` : `
+              <button disabled class="flex-1 py-1 px-2 text-[10px] font-bold rounded bg-slate-800/80 text-slate-500 cursor-not-allowed" title="Trading locked until company develops properties">🔒 Trading Awaiting Initial Development</button>
+            `}
+            ${(!isMe && isTraded) ? `<button onclick="window.ui.takeover('${f.id}')" class="py-1 px-2 text-[10px] font-bold rounded ${votingPercent > 50 ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}" title="Buy whole company when you own over 50%">Take Over</button>` : ''}
           </div>
         </div>
       `;
@@ -1360,6 +1402,11 @@ class UIController {
   tradeStock(targetFirmId, count, isBuy) {
     const myFirm = this.network.gameState.firms.get(this.network.firmId);
     const targetFirm = this.network.gameState.firms.get(targetFirmId);
+    if (targetFirm && targetFirm.isActivelyTraded === false) {
+      this.showToast(`Trading Locked: ${targetFirm.name} must purchase land and build developments to unlock stock trading!`, 'error');
+      SpeechHelper.speakIfAuto(`Trading is locked. ${targetFirm.name} has not built initial developments yet.`);
+      return;
+    }
     if (myFirm && targetFirm) {
       const price = targetFirm.stock.price;
       const totalCost = Math.round(price * count);

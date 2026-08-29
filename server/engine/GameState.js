@@ -518,6 +518,7 @@ class GameState {
       id: 'firm_player_1',
       name: 'Pinnacle Metro Enterprises',
       isHuman: true,
+      isActivelyTraded: false, // Stock trading unlocks after purchasing land & building developments
       color: '#3b82f6',
       cash: 150000,
       influencePoints: 80,
@@ -555,8 +556,8 @@ class GameState {
     };
     this.firms.set(playerFirm.id, playerFirm);
 
-    // Create 49 Bot Competitors
-    for (let i = 0; i < 49; i++) {
+    // Create 9 Starting Bot Competitors (Total 10 Starting Companies on Exchange)
+    for (let i = 0; i < 9; i++) {
       const botId = `firm_bot_${i + 2}`;
       const name = BOT_NAMES[i] || `Constellation Firm #${i + 2}`;
       const color = COLORS[(i + 1) % COLORS.length];
@@ -565,6 +566,7 @@ class GameState {
         id: botId,
         name,
         isHuman: false,
+        isActivelyTraded: true, // Bot competitors start with active port developments
         color,
         personality: ['TYCOON', 'ECO', 'UNION_LOYAL', 'SPECULATOR', 'POLITICIAN'][i % 5],
         cash: 90000 + Math.floor(Math.random() * 80000),
@@ -572,8 +574,8 @@ class GameState {
         unionLoyalty: 40 + Math.floor(Math.random() * 40),
         bribeAuditRisk: 0,
         taxAbatementsActive: 0,
-        totalBuildings: 0,
-        totalLand: 0,
+        totalBuildings: 1,
+        totalLand: 2,
         stock: {
           totalShares: 100000,
           publicShares: 40000,
@@ -603,6 +605,90 @@ class GameState {
       };
       this.firms.set(botId, botFirm);
     }
+  }
+
+  // Check and unlock active stock market trading once player purchases properties & builds structures
+  checkAndActivateTrading(firmId) {
+    const firm = this.firms.get(firmId);
+    if (!firm) return false;
+    if (firm.isActivelyTraded === false && (firm.totalLand > 0 && firm.totalBuildings > 0)) {
+      firm.isActivelyTraded = true;
+      this.addNews(
+        `🔔 IPO & TRADING UNLOCKED: ${firm.name} has completed initial property developments (${firm.totalLand} Land, ${firm.totalBuildings} Buildings)! Stock ($${firm.stock.price.toFixed(2)}) is now actively traded on the City Stock Exchange.`,
+        'success',
+        { firmId: firm.id }
+      );
+      this.markFirmDirty(firm.id);
+      return true;
+    }
+    return false;
+  }
+
+  // Register a new user profile as a listed company on the exchange
+  registerUserFirm(profileName, customColor) {
+    const firmId = `firm_user_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const playerPrice = 15.00;
+    const COLORS = [
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+      '#eab308', '#6366f1', '#14b8a6', '#f97316', '#a855f7', '#d946ef', '#0ea5e9', '#22c55e'
+    ];
+
+    const generateInitialStockHistory = (basePrice, count = 500) => {
+      const history = [];
+      let cur = basePrice * 0.85;
+      for (let i = 0; i < count; i++) {
+        const drift = (basePrice - cur) * 0.04;
+        const noise = (Math.random() - 0.48) * (basePrice * 0.035);
+        cur = Math.max(1.0, +(cur + drift + noise).toFixed(2));
+        history.push(cur);
+      }
+      history[history.length - 1] = basePrice;
+      return history;
+    };
+
+    const newFirm = {
+      id: firmId,
+      name: profileName || `Metro Builder #${this.firms.size + 1}`,
+      isHuman: true,
+      isActivelyTraded: false, // Stock trading unlocks after purchasing land & building developments
+      color: customColor || COLORS[this.firms.size % COLORS.length],
+      cash: 150000,
+      influencePoints: 80,
+      unionLoyalty: 50,
+      bribeAuditRisk: 0,
+      taxAbatementsActive: 0,
+      totalBuildings: 0,
+      totalLand: 0,
+      stock: {
+        totalShares: 100000,
+        publicShares: 35000,
+        price: playerPrice,
+        nav: playerPrice,
+        history: generateInitialStockHistory(playerPrice, 500)
+      },
+      shareHoldings: { [firmId]: 65000 },
+      shortPositions: {},
+      marginLoan: {
+        borrowedAmount: 0,
+        collateralShares: 0
+      },
+      marginStatus: 'HEALTHY',
+      marginGraceExpiry: null,
+      politicalSeat: null,
+      netWorth: 150000,
+      hourlyRevenue: 0,
+      hourlyMaintenance: 0,
+      inventory: {
+        concrete: 150,
+        steel: 80,
+        timber: 200,
+        rareEarth: 20,
+        superconductors: 10
+      }
+    };
+    this.firms.set(firmId, newFirm);
+    this.addNews(`🏢 NEW PROFILE LISTED: ${newFirm.name} added to the City Stock Exchange (Awaiting initial property development).`, 'politics');
+    return newFirm;
   }
 
   addNews(headline, type = 'info', impact = null) {

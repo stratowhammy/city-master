@@ -225,11 +225,17 @@ class StockMarketEngine {
     this.gameState.markFirmDirty(firm.id);
   }
 
-  // Buy or Sell Shares
   tradeShares(buyerFirmId, targetFirmId, count, isBuy) {
     const buyer = this.gameState.firms.get(buyerFirmId);
     const target = this.gameState.firms.get(targetFirmId);
     if (!buyer || !target || count <= 0) return { success: false, reason: 'Invalid parameters' };
+
+    if (target.isActivelyTraded === false) {
+      return {
+        success: false,
+        reason: `Trading Not Available: ${target.name} has not completed initial developments yet (must purchase properties and build structures).`
+      };
+    }
 
     const totalCost = Math.round(count * target.stock.price);
 

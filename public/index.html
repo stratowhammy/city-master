@@ -84,6 +84,9 @@
       <button onclick="window.tutorial && window.tutorial.start()" class="py-1.5 px-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all">
         <span>🎓 Tutorial</span>
       </button>
+      <button id="btn-open-profile" class="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1" title="Register / Edit Company Profile">
+        <span>👤 Profile</span>
+      </button>
       <button id="btn-open-settings" class="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1" title="Open Audio & Game Settings">
         <span>⚙️ Settings</span>
       </button>
@@ -412,6 +415,45 @@
       <div class="mt-4 pt-2 border-t border-slate-800 flex justify-end">
         <button id="settings-save-btn" class="py-1.5 px-4 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition-all shadow-md">
           Save & Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile & Company Registration Modal -->
+  <div id="modal-profile" class="modal-overlay hidden">
+    <div class="modal-card border-sky-500 max-w-md">
+      <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏢</span>
+          <h2 class="text-base font-extrabold text-white">Create Company Profile</h2>
+        </div>
+        <button id="profile-close-btn" class="text-slate-400 hover:text-white font-bold text-lg px-2 py-0.5 rounded bg-slate-800" title="Close Profile">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-200">
+        <div class="p-3 rounded-lg bg-sky-950/50 border border-sky-600/60 leading-relaxed text-[11px]">
+          💡 <strong>Exchange Listing:</strong> Every company profile created is automatically listed on the City Stock Exchange. Your stock will unlock active public trading as soon as you purchase your first property and construct buildings!
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="font-bold text-slate-300">Company / Tycoon Name</label>
+          <input type="text" id="profile-name-input" placeholder="e.g. Emerald Metro Enterprises" class="w-full bg-slate-900 border border-slate-700 text-white font-semibold text-xs p-2.5 rounded-lg focus:outline-none focus:border-sky-500">
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="font-bold text-slate-300">Company Brand Color</label>
+          <div class="flex gap-2">
+            <input type="color" id="profile-color-input" value="#3b82f6" class="w-12 h-8 rounded border border-slate-700 cursor-pointer bg-slate-900">
+            <span class="text-[11px] text-slate-400 self-center">Choose your signature skyline marker color</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-800 flex justify-end gap-2">
+        <button onclick="document.getElementById('modal-profile').classList.add('hidden')" class="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">Cancel</button>
+        <button id="profile-save-btn" class="py-1.5 px-4 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition-all">
+          🚀 Register on Stock Exchange
         </button>
       </div>
     </div>

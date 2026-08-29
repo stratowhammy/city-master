@@ -15,10 +15,10 @@ console.log('🧪 Starting City Master Simulation Engine Test Suite...\n');
 // 1. Initialize Game State
 const state = new GameState();
 assert.strictEqual(state.gridSize, 60, 'Grid size must be 60x60');
-assert.strictEqual(state.firms.size, 50, 'Must have 50 firms initialized');
+assert.strictEqual(state.firms.size, 10, 'Must have 10 starting firms initialized');
 assert.strictEqual(state.districts.length, 10, 'Must have 10 legislative districts');
 assert.strictEqual(state.maritimePorts.length, 3, 'Must have 3 distinct maritime ports');
-console.log('✅ Subsystem 1: GameState Initialization Passed (60x60 Grid, 50 Firms, 10 Districts, 3 Ports)');
+console.log('✅ Subsystem 1: GameState Initialization Passed (60x60 Grid, 10 Starting Firms, 10 Districts, 3 Ports)');
 
 // 2. Curving Coastline & Maritime Ports Verification
 assert(state.isOceanWater(30, 55), 'Deep southern coordinates must be ocean water');
@@ -200,5 +200,27 @@ player.marginLoan = { borrowedAmount: 3000000, collateralShares: 50000 };
 stock.processMarginAndLiquidation();
 assert(['MARGIN_CALL', 'LIQUIDATION'].includes(player.marginStatus), 'Overleveraged firm must trigger Margin Call / Liquidation');
 console.log(`✅ Subsystem 9B: Automated 3-Tier Liquidation Engine Passed (Status: ${player.marginStatus})`);
+
+// 9C. Dynamic User Profile Registration & Delayed Active Trading Gate
+assert.strictEqual(player.isActivelyTraded, false, 'Player firm stock must not be actively traded prior to developments');
+
+const blockedTrade = stock.tradeShares('firm_bot_2', 'firm_player_1', 100, true);
+assert.strictEqual(blockedTrade.success, false, 'Trading un-developed firm stock must be rejected');
+
+// Simulate player buying land and building structures
+player.totalLand = 1;
+player.totalBuildings = 1;
+const unlocked = state.checkAndActivateTrading('firm_player_1');
+assert.strictEqual(unlocked, true, 'checkAndActivateTrading must unlock active trading once land & building are owned');
+assert.strictEqual(player.isActivelyTraded, true, 'Firm must now be marked isActivelyTraded: true');
+
+const allowedTrade = stock.tradeShares('firm_bot_2', 'firm_player_1', 100, true);
+assert.strictEqual(allowedTrade.success, true, 'Trading must succeed once development requirements are met');
+
+// Register a dynamic new user profile
+const registeredFirm = state.registerUserFirm('Apex Innovators Co', '#ec4899');
+assert.strictEqual(state.firms.size, 11, 'Exchange must now list 11 total firms');
+assert.strictEqual(registeredFirm.isActivelyTraded, false, 'New user profile firm must start with isActivelyTraded: false');
+console.log('✅ Subsystem 9C: Dynamic Profile Registration & Development-Gated Active Trading Passed');
 
 console.log('\n🎉 ALL SUBSYSTEMS PASSED TEST VERIFICATION SUCCESSFULLY!');

@@ -258,6 +258,23 @@ function handleClientMessage(client, msg) {
     return;
   }
 
+  if (type === 'CREATE_PROFILE') {
+    const { profileName, color } = payload || {};
+    const newFirm = gameState.registerUserFirm(profileName, color);
+    client.firmId = newFirm.id;
+    if (client.token) {
+      gameState.reconnectionTokens.set(client.token, { firmId: newFirm.id, connectedAt: Date.now() });
+    }
+    sendToClient(client, 'PROFILE_CREATED', {
+      firmId: newFirm.id,
+      firm: newFirm
+    });
+    sendToClient(client, 'ACTION_SUCCESS', {
+      message: `Profile "${newFirm.name}" created and added to the City Stock Exchange!`
+    });
+    return;
+  }
+
   const firm = gameState.firms.get(client.firmId);
   if (!firm) return;
 
@@ -278,6 +295,7 @@ function handleClientMessage(client, msg) {
         firm.cash -= tile.landValue;
         tile.ownerId = firm.id;
         firm.totalLand = (firm.totalLand || 0) + 1;
+        gameState.checkAndActivateTrading(firm.id);
         gameState.updateRoadNetwork();
         gameState.markTileDirty(x, y);
         gameState.markFirmDirty(firm.id);
@@ -335,6 +353,7 @@ function handleClientMessage(client, msg) {
         politicsEngine.grantTaxAbatement(firm.id, x, y, true);
       }
 
+      gameState.checkAndActivateTrading(firm.id);
       gameState.updateRoadNetwork();
       gameState.markTileDirty(x, y);
       gameState.markFirmDirty(firm.id);

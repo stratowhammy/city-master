@@ -153,6 +153,10 @@ class NetworkClient {
       if (data.news) this.gameState.news = data.news;
 
       if (this.callbacks.onDelta) this.callbacks.onDelta(this.gameState);
+    } else if (type === 'PROFILE_CREATED') {
+      this.firmId = data.firmId;
+      if (data.firm) this.gameState.firms.set(data.firmId, data.firm);
+      if (this.callbacks.onProfileCreated) this.callbacks.onProfileCreated(data);
     } else if (type === 'ACTION_SUCCESS') {
       if (this.callbacks.onActionSuccess) this.callbacks.onActionSuccess(data);
     } else if (type === 'ACTION_ERROR') {
@@ -163,6 +167,7 @@ class NetworkClient {
   }
 
   // High-level Actions
+  createProfile(profileName, color) { this.send('CREATE_PROFILE', { profileName, color }); }
   buyLand(x, y) { this.send('BUY_LAND', { x, y }); }
   setZoning(x, y, zoning) { this.send('SET_ZONING', { x, y, zoning }); }
   constructBuilding(x, y, buildingType, unionBuilt) { this.send('CONSTRUCT_BUILDING', { x, y, buildingType, unionBuilt }); }

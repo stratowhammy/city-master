@@ -38,10 +38,57 @@ class UIController {
         toolBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.selectedTool = btn.dataset.tool;
-        const speechDesc = btn.dataset.speech || btn.title || this.selectedTool;
-        this.showToast(`Selected: ${btn.title || this.selectedTool}`);
+        this.renderer.activeTool = this.selectedTool;
+        
+        let msg = `Selected: ${btn.title || this.selectedTool}`;
+        if (this.selectedTool === 'BUY_LAND') {
+          msg = 'Buy Land active: All available land is highlighted in glowing neon green!';
+          SpeechHelper.speak('Buy Land active. Available land is highlighted in neon green with price tags.');
+        }
+        this.showToast(msg);
       });
     });
+
+    // Building & Density Filter buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filterKey = btn.dataset.filter;
+        if (!filterKey || !this.renderer.buildingFilters) return;
+
+        const currentVal = this.renderer.buildingFilters[filterKey];
+        const newVal = !currentVal;
+        this.renderer.buildingFilters[filterKey] = newVal;
+
+        if (newVal) {
+          btn.classList.add('active');
+          btn.classList.remove('off');
+          this.showToast(`Filter: ${btn.innerText} ON`);
+          SpeechHelper.speak(`${btn.innerText} turned on.`);
+        } else {
+          btn.classList.remove('active');
+          btn.classList.add('off');
+          this.showToast(`Filter: ${btn.innerText} OFF`);
+          SpeechHelper.speak(`${btn.innerText} turned off.`);
+        }
+      });
+    });
+
+    // Show All Filters button
+    const showAllBtn = document.getElementById('btn-show-all-filters');
+    if (showAllBtn) {
+      showAllBtn.addEventListener('click', () => {
+        for (const key of Object.keys(this.renderer.buildingFilters)) {
+          this.renderer.buildingFilters[key] = true;
+        }
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.classList.add('active');
+          b.classList.remove('off');
+        });
+        this.showToast('All building filters turned ON');
+        SpeechHelper.speak('All building filters turned on.');
+      });
+    }
 
     // Helper Workers (Union Labor) toggle
     const unionToggle = document.getElementById('toggle-union-labor');
@@ -65,9 +112,9 @@ class UIController {
         
         let voiceMsg = `Switched to ${btn.innerText} view.`;
         if (this.renderer.overlayMode === 'UNOWNED') {
-          voiceMsg = 'For Sale view: Green glowing squares are available land you can purchase!';
+          voiceMsg = 'For Sale view: Available land is highlighted in glowing neon green with price tags!';
         } else if (this.renderer.overlayMode === 'POLLUTION') {
-          voiceMsg = 'Pollution view: Showing dirty smoke percentage on each tile. Red means heavy smoke!';
+          voiceMsg = 'Pollution view: Showing dirty smoke percentages on each square. Red means heavy smoke!';
         } else if (this.renderer.overlayMode === 'LAND_VALUE') {
           voiceMsg = 'Land Value view: Showing exact dollar value for each square. Gold and green mean high value!';
         }

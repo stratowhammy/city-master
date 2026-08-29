@@ -90,17 +90,30 @@
     </div>
   </header>
 
-  <!-- Layer Overlays Bar -->
+  <!-- Layer Overlays Bar (Toggle between Normal, Land Value, Pollution, For Sale, Zones, Districts) -->
   <nav class="overlays-bar">
     <button class="overlay-btn active" data-overlay="NORMAL" title="Standard City Map view">Normal 🗺️</button>
-    <button class="overlay-btn text-emerald-400 font-bold" data-overlay="UNOWNED" title="Highlight all unpurchased land available for sale">🏷️ For Sale</button>
-    <button class="overlay-btn text-rose-400 font-bold" data-overlay="POLLUTION" title="See exact dirty smoke pollution on each tile">🌫️ Pollution (Smoke)</button>
     <button class="overlay-btn text-amber-300 font-bold" data-overlay="LAND_VALUE" title="See exact dollar land value for each tile">💎 Land Value ($)</button>
+    <button class="overlay-btn text-rose-400 font-bold" data-overlay="POLLUTION" title="See exact dirty smoke pollution on each tile">🌫️ Pollution (Smoke)</button>
+    <button class="overlay-btn text-emerald-400 font-bold" data-overlay="UNOWNED" title="Highlight all available unpurchased land in neon green">🏷️ For Sale</button>
     <button class="overlay-btn text-blue-300 font-bold" data-overlay="ZONING" title="Show Residential, Commercial, and Industrial zones">🎨 Zones</button>
     <button class="overlay-btn text-purple-300 font-bold" data-overlay="DISTRICTS" title="Show 10 City Neighborhood Districts">🏛️ 10 Neighborhoods</button>
     <!-- Sky City Feature Disabled (Preserved for future reactivation) -->
     <button class="overlay-btn text-cyan-400 font-bold hidden" data-overlay="ANTIGRAVITY" title="Show floating arcologies and Z-height">🛸 Sky Cities</button>
   </nav>
+
+  <!-- Building & Density Filters Bar (Toggle Residential, Low/Med/High Commercial, and Industrial) -->
+  <div class="building-filters-bar">
+    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
+      <span>🔍 Filter:</span>
+    </span>
+    <button class="filter-btn active text-emerald-300 font-bold" data-filter="RESIDENTIAL" title="Toggle Residential Houses on/off">🏠 Houses</button>
+    <button class="filter-btn active text-sky-300 font-bold" data-filter="COMMERCIAL_L1" title="Toggle Low-Density Commercial Corner Stores on/off">🏪 Stores (Low Comm)</button>
+    <button class="filter-btn active text-blue-400 font-bold" data-filter="COMMERCIAL_L2" title="Toggle Medium-Density Commercial Offices on/off">🏢 Offices (Med Comm)</button>
+    <button class="filter-btn active text-indigo-300 font-bold" data-filter="COMMERCIAL_L3" title="Toggle High-Density Commercial Towers on/off">🏬 Towers (High Comm)</button>
+    <button class="filter-btn active text-amber-400 font-bold" data-filter="INDUSTRIAL" title="Toggle Industrial Factories (Pollution Sources) on/off">🏭 Factories</button>
+    <button id="btn-show-all-filters" class="py-1 px-2 text-[10px] font-bold rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all" title="Turn all building filters ON">Show All</button>
+  </div>
 
   <!-- Tile Inspector Card -->
   <aside class="inspector-card">

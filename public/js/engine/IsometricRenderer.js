@@ -1,5 +1,5 @@
 // public/js/engine/IsometricRenderer.js
-// 2:1 Dimetric Isometric Renderer with Enhanced Overlays (Pollution, Land Value, Unowned Land)
+// 2:1 Dimetric Isometric Renderer with Neon Green Land Highlighting & Building Density Toggles
 
 class IsometricRenderer {
   constructor(canvas, assets) {
@@ -11,10 +11,19 @@ class IsometricRenderer {
     this.TILE_HEIGHT = 32;
 
     this.camera = { x: 0, y: -480, zoom: 0.85 };
-    this.overlayMode = 'NORMAL'; // 'NORMAL', 'UNOWNED', 'POLLUTION', 'LAND_VALUE', 'ZONING', 'DISTRICTS'
-    
+    this.overlayMode = 'NORMAL'; // 'NORMAL', 'POLLUTION', 'LAND_VALUE', 'UNOWNED', 'ZONING', 'DISTRICTS'
+
     // Feature Flag: Sky Cities disabled (preserved for future reactivation)
     this.ENABLE_SKY_CITIES = false;
+
+    // Building & Zone Density Filter Toggles
+    this.buildingFilters = {
+      RESIDENTIAL: true,    // 🏠 Houses & Apartments
+      COMMERCIAL_L1: true,  // 🏪 Stores & Low-Density Commercial
+      COMMERCIAL_L2: true,  // 🏢 Offices & Medium-Density Commercial
+      COMMERCIAL_L3: true,  // 🏬 Towers & High-Density Commercial
+      INDUSTRIAL: true      // 🏭 Factories & Workshops
+    };
 
     this.hoveredTile = null;
     this.selectedTile = null;
@@ -37,12 +46,15 @@ class IsometricRenderer {
   }
 
   // Convert Screen (px, py) -> Grid Coordinates
-  screenToGrid(sx, sy) {
-    const worldX = (sx - this.canvas.width / 2) / this.camera.zoom - this.camera.x;
-    const worldY = (sy - this.canvas.height / 2) / this.camera.zoom - this.camera.y;
+  screenToGrid(screenX, screenY) {
+    const worldX = (screenX - this.canvas.width / 2) / this.camera.zoom - this.camera.x;
+    const worldY = (screenY - this.canvas.height / 2) / this.camera.zoom - this.camera.y;
 
-    const gx = (worldX / (this.TILE_WIDTH / 2) + worldY / (this.TILE_HEIGHT / 2)) / 2;
-    const gy = (worldY / (this.TILE_HEIGHT / 2) - worldX / (this.TILE_WIDTH / 2)) / 2;
+    const halfW = this.TILE_WIDTH / 2;
+    const halfH = this.TILE_HEIGHT / 2;
+
+    const gx = (worldX / halfW + worldY / halfH) / 2;
+    const gy = (worldY / halfH - worldX / halfW) / 2;
 
     return { x: Math.floor(gx), y: Math.floor(gy) };
   }
@@ -51,7 +63,7 @@ class IsometricRenderer {
     const ctx = this.ctx;
     const { width, height } = this.canvas;
 
-    // Clear Screen (Futuristic Dark Cyberpunk Horizon)
+    // Clear Screen (Futuristic Dark Horizon)
     ctx.fillStyle = '#090d16';
     ctx.fillRect(0, 0, width, height);
 
@@ -88,7 +100,7 @@ class IsometricRenderer {
           this.assets.drawIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#2d6a4f', '#1b4332', '#40916c');
         }
 
-        // B. Ownership Borders & Unpurchased Land Identifiers
+        // B. Ownership Borders & Neon Green Available Land Identifiers
         this.renderOwnershipBorders(ctx, tile, screenPos, localPlayerFirmId, gameState);
 
         // C. Layer Overlays (Pollution AoE, Land Value Heatmap, For Sale, Zoning, Districts)
@@ -101,11 +113,43 @@ class IsometricRenderer {
           floatingDrawQueue.push({ tile, x, y, screenPos });
         }
 
-        // E. Ground Building (Level 1..3)
+        // E. Ground Building with Density/Type Filters
         if (tile.groundBuilding) {
-          const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
-          const ownerColor = firm ? firm.color : '#3b82f6';
-          this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, tile.groundBuilding, ownerColor);
+          const b = tile.groundBuilding;
+          let isVisible = true;
+
+          if (b.type === 'RESIDENTIAL') {
+            isVisible = this.buildingFilters.RESIDENTIAL;
+          } else if (b.type === 'INDUSTRIAL') {
+            isVisible = this.buildingFilters.INDUSTRIAL;
+          } else if (b.type === 'COMMERCIAL') {
+            if (b.level === 1) isVisible = this.buildingFilters.COMMERCIAL_L1;
+            else if (b.level === 2) isVisible = this.buildingFilters.COMMERCIAL_L2;
+            else if (b.level >= 3) isVisible = this.buildingFilters.COMMERCIAL_L3;
+          }
+
+          if (isVisible) {
+            const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
+            const ownerColor = firm ? firm.color : '#3b82f6';
+            this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, b, ownerColor);
+
+            // Display informative badge above filtered building when zoomed in
+            if (this.camera.zoom >= 0.70) {
+              if (b.type === 'COMMERCIAL') {
+                if (b.level === 1) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏪 Store (Low Comm)', '#0284c7');
+                else if (b.level === 2) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏢 Office (Med Comm)', '#0369a1');
+                else if (b.level >= 3) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏬 Mall (High Comm)', '#1d4ed8');
+              } else if (b.type === 'INDUSTRIAL') {
+                this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏭 Factory', '#b45309');
+              } else if (b.type === 'RESIDENTIAL') {
+                this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, `🏠 House L${b.level}`, '#047857');
+              }
+            }
+          } else {
+            // Render subtle ghost footprint when filtered off
+            ctx.fillStyle = 'rgba(71, 85, 105, 0.20)';
+            this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
+          }
         }
 
         // F. Highlight Hovered / Selected Tile
@@ -115,8 +159,8 @@ class IsometricRenderer {
           this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
 
           // Hover tag for unpurchased land
-          if (!tile.ownerId) {
-            this.drawTileBadge(ctx, screenPos.x, screenPos.y, `🏷️ FOR SALE: $${tile.landValue.toLocaleString()}`, '#10b981', '#ffffff');
+          if (!tile.ownerId && !tile.isWater) {
+            this.drawTileBadge(ctx, screenPos.x, screenPos.y, `🏷️ FOR SALE: $${tile.landValue.toLocaleString()}`, '#059669', '#ffffff');
           }
         }
 
@@ -141,7 +185,6 @@ class IsometricRenderer {
         this.assets.drawFloatingArcology(ctx, screenPos.x, floatingScreenY, arcology, ownerColor);
       }
 
-      // 3. Render Floating Transit Lines ONLY when Antigravity Overlay is active
       if (this.overlayMode === 'ANTIGRAVITY') {
         this.renderFlyingTransit(ctx, gameState);
       }
@@ -176,7 +219,7 @@ class IsometricRenderer {
     ctx.fill();
   }
 
-  // Draw pill text badge on tile
+  // Draw pill text badge on tile center
   drawTileBadge(ctx, screenX, screenY, text, bgColor = '#0f172a', textColor = '#ffffff') {
     ctx.save();
     ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -203,14 +246,61 @@ class IsometricRenderer {
     ctx.restore();
   }
 
-  // Render distinct borders for Owned vs Unpurchased squares
+  // Draw floating badge above buildings
+  drawBuildingBadge(ctx, screenX, screenY, text, bgColor = '#0284c7') {
+    ctx.save();
+    ctx.font = 'bold 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const textWidth = ctx.measureText(text).width;
+    const paddingX = 4;
+    const badgeHeight = 12;
+    const badgeWidth = textWidth + paddingX * 2;
+    const badgeX = screenX - badgeWidth / 2;
+    const badgeY = screenY - 4; // Floating above the roof
+
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, screenX, badgeY + badgeHeight / 2);
+    ctx.restore();
+  }
+
+  // Render distinct borders & Neon Green Available Land
   renderOwnershipBorders(ctx, tile, screenPos, localPlayerFirmId, gameState) {
     ctx.save();
 
+    const isBuyLandMode = (this.activeTool === 'BUY_LAND' || this.overlayMode === 'UNOWNED');
+
     if (!tile.ownerId) {
-      // UNPURCHASED SQUARE IDENTIFIER
-      if (this.overlayMode === 'NORMAL' || this.overlayMode === 'UNOWNED') {
-        // Subtle dotted white outline for unpurchased land
+      if (tile.isWater) {
+        ctx.restore();
+        return;
+      }
+
+      if (isBuyLandMode) {
+        // ✨ NEON GREEN AVAILABLE LAND HIGHLIGHTING
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.45)'; // Bright Neon Green Fill
+        this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
+
+        ctx.strokeStyle = '#4ade80'; // Glowing Neon Green Border
+        ctx.lineWidth = 2.0;
+        this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
+
+        // Price badge in center of unowned tile
+        if (this.camera.zoom >= 0.60) {
+          const val = tile.landValue || 5000;
+          this.drawTileBadge(ctx, screenPos.x, screenPos.y, `$${val.toLocaleString()}`, '#064e3b', '#86efac');
+        }
+      } else {
+        // Subtle dotted white outline in normal view
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
@@ -218,10 +308,16 @@ class IsometricRenderer {
         ctx.setLineDash([]);
       }
     } else {
-      // OWNED SQUARE IDENTIFIER
+      // OWNED SQUARE
       const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
       const ownerColor = firm ? firm.color : '#38bdf8';
       const isMine = (tile.ownerId === localPlayerFirmId);
+
+      if (isBuyLandMode) {
+        // Dim owned land in buy land mode so available land pops out
+        ctx.fillStyle = isMine ? 'rgba(56, 189, 248, 0.20)' : 'rgba(15, 23, 42, 0.50)';
+        this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
+      }
 
       if (isMine) {
         // Player's own land: Glowing double cyan border
@@ -239,35 +335,14 @@ class IsometricRenderer {
     ctx.restore();
   }
 
-  // Main Map Overlays (Pollution, Land Value, For Sale, Zoning, Districts)
+  // Main Map Overlays (Pollution, Land Value, Zoning, Districts)
   renderTileOverlay(ctx, tile, screenPos, localPlayerFirmId, gameState) {
-    if (this.overlayMode === 'NORMAL') return;
+    if (this.overlayMode === 'NORMAL' || this.overlayMode === 'UNOWNED') return;
 
     ctx.save();
 
-    // 1. FOR SALE (UNPURCHASED LAND VIEW)
-    if (this.overlayMode === 'UNOWNED') {
-      if (!tile.ownerId) {
-        // Highlight unpurchased land in bright emerald green with price tag
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.55)';
-        this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
-        ctx.strokeStyle = '#34d399';
-        ctx.lineWidth = 1.5;
-        this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
-
-        if (this.camera.zoom >= 0.7) {
-          this.drawTileBadge(ctx, screenPos.x, screenPos.y, `$${tile.landValue.toLocaleString()}`, '#064e3b', '#6ee7b7');
-        }
-      } else {
-        // Owned land is dimmed
-        const isMine = (tile.ownerId === localPlayerFirmId);
-        ctx.fillStyle = isMine ? 'rgba(56, 189, 248, 0.25)' : 'rgba(15, 23, 42, 0.65)';
-        this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
-      }
-    }
-
-    // 2. POLLUTION (DIRTY SMOKE HEATMAP VIEW)
-    else if (this.overlayMode === 'POLLUTION') {
+    // 1. POLLUTION (DIRTY SMOKE HEATMAP VIEW)
+    if (this.overlayMode === 'POLLUTION') {
       const pol = tile.pollution || 0;
       if (pol === 0) {
         // Clean air (Fresh soft green)
@@ -299,10 +374,10 @@ class IsometricRenderer {
       }
     }
 
-    // 3. LAND VALUE & DESIRABILITY HEATMAP VIEW
+    // 2. LAND VALUE & DESIRABILITY HEATMAP VIEW
     else if (this.overlayMode === 'LAND_VALUE') {
       const val = tile.landValue || 5000;
-      let fillColor = 'rgba(234, 179, 8, 0.5)'; // default yellow
+      let fillColor = 'rgba(234, 179, 8, 0.5)';
       let badgeBg = '#78350f';
       let tag = `$${val.toLocaleString()}`;
 
@@ -340,7 +415,7 @@ class IsometricRenderer {
       }
     }
 
-    // 4. ZONING VIEW (Residential, Commercial, Industrial, Civic)
+    // 3. ZONING VIEW (Residential, Commercial, Industrial, Civic)
     else if (this.overlayMode === 'ZONING') {
       if (tile.zoning === 'RESIDENTIAL') ctx.fillStyle = 'rgba(34, 197, 94, 0.55)';
       else if (tile.zoning === 'COMMERCIAL') ctx.fillStyle = 'rgba(59, 130, 246, 0.55)';
@@ -355,7 +430,7 @@ class IsometricRenderer {
       }
     }
 
-    // 5. 10 NEIGHBORHOOD DISTRICTS VIEW
+    // 4. 10 NEIGHBORHOOD DISTRICTS VIEW
     else if (this.overlayMode === 'DISTRICTS') {
       const colors = ['#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b', '#64748b', '#10b981', '#06b6d4', '#0284c7', '#a855f7', '#ec4899'];
       const col = colors[(tile.districtId - 1) % colors.length];
@@ -367,47 +442,11 @@ class IsometricRenderer {
       }
     }
 
-    // 6. ANTIGRAVITY SKY CITIES VIEW
-    else if (this.overlayMode === 'ANTIGRAVITY') {
-      if (tile.floatingBuilding) {
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.65)';
-        this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-        this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
-        this.drawTileBadge(ctx, screenPos.x, screenPos.y, `🛸 Z=${Math.round(tile.floatingBuilding.current_z || 64)}`, '#0369a1', '#ffffff');
-      }
-    }
-
     ctx.restore();
   }
 
   renderFlyingTransit(ctx, gameState) {
-    ctx.save();
-    const arcologies = [];
-    const size = gameState.gridSize || 60;
-    for (let x = 0; x < size; x++) {
-      for (let y = 0; y < size; y++) {
-        const t = gameState.grid && gameState.grid[x] && gameState.grid[x][y];
-        if (t && t.floatingBuilding) {
-          arcologies.push({ x, y, pos: this.gridToScreen(x, y, 64) });
-        }
-      }
-    }
-
-    if (arcologies.length > 1) {
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      for (let i = 0; i < arcologies.length - 1; i++) {
-        ctx.moveTo(arcologies[i].pos.x, arcologies[i].pos.y);
-        ctx.lineTo(arcologies[i + 1].pos.x, arcologies[i + 1].pos.y);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.restore();
+    // Preserved for future Sky City reactivation
   }
 }
 

@@ -62,6 +62,17 @@ class UIController {
         overlayBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.renderer.overlayMode = btn.dataset.overlay;
+        
+        let voiceMsg = `Switched to ${btn.innerText} view.`;
+        if (this.renderer.overlayMode === 'UNOWNED') {
+          voiceMsg = 'For Sale view: Green glowing squares are available land you can purchase!';
+        } else if (this.renderer.overlayMode === 'POLLUTION') {
+          voiceMsg = 'Pollution view: Showing dirty smoke percentage on each tile. Red means heavy smoke!';
+        } else if (this.renderer.overlayMode === 'LAND_VALUE') {
+          voiceMsg = 'Land Value view: Showing exact dollar value for each square. Gold and green mean high value!';
+        }
+        this.showToast(voiceMsg);
+        SpeechHelper.speak(voiceMsg);
       });
     });
 

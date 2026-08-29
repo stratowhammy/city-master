@@ -258,8 +258,8 @@ class TutorialSystem {
 
     if (step.onStart) step.onStart();
 
-    // Play cloned Fenn voice model audio directly
-    SpeechHelper.playAudioOrSpeak(step.audioSrc, step.speech);
+    // Only auto-play if Auto Read is enabled in Settings (clicking speaker button always plays)
+    SpeechHelper.playAudioOrSpeakIfAuto(step.audioSrc, step.speech);
   }
 
   nextStep() {

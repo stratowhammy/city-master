@@ -32,6 +32,7 @@ class UIController {
 
   initEventListeners() {
     // Toolbar tool buttons
+    // Toolbar tool buttons
     const toolBtns = document.querySelectorAll('.tool-btn');
     toolBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -43,7 +44,7 @@ class UIController {
         let msg = `Selected: ${btn.title || this.selectedTool}`;
         if (this.selectedTool === 'BUY_LAND') {
           msg = 'Buy Land active: All available land is highlighted in glowing neon green!';
-          SpeechHelper.speak('Buy Land active. Available land is highlighted in neon green with price tags.');
+          SpeechHelper.speakIfAuto('Buy Land active. Available land is highlighted in neon green with price tags.');
         }
         this.showToast(msg);
       });
@@ -64,12 +65,12 @@ class UIController {
           btn.classList.add('active');
           btn.classList.remove('off');
           this.showToast(`Filter: ${btn.innerText} ON`);
-          SpeechHelper.speak(`${btn.innerText} turned on.`);
+          SpeechHelper.speakIfAuto(`${btn.innerText} turned on.`);
         } else {
           btn.classList.remove('active');
           btn.classList.add('off');
           this.showToast(`Filter: ${btn.innerText} OFF`);
-          SpeechHelper.speak(`${btn.innerText} turned off.`);
+          SpeechHelper.speakIfAuto(`${btn.innerText} turned off.`);
         }
       });
     });
@@ -86,7 +87,7 @@ class UIController {
           b.classList.remove('off');
         });
         this.showToast('All building filters turned ON');
-        SpeechHelper.speak('All building filters turned on.');
+        SpeechHelper.speakIfAuto('All building filters turned on.');
       });
     }
 
@@ -119,9 +120,71 @@ class UIController {
           voiceMsg = 'Land Value view: Showing exact dollar value for each square. Gold and green mean high value!';
         }
         this.showToast(voiceMsg);
-        SpeechHelper.speak(voiceMsg);
+        SpeechHelper.speakIfAuto(voiceMsg);
       });
     });
+
+    // Settings Modal
+    const btnOpenSettings = document.getElementById('btn-open-settings');
+    const modalSettings = document.getElementById('modal-settings');
+    const settingsCloseBtn = document.getElementById('settings-close-btn');
+    const settingsSaveBtn = document.getElementById('settings-save-btn');
+    const toggleAutoRead = document.getElementById('setting-toggle-autoread');
+    const speechRateInput = document.getElementById('setting-speech-rate');
+    const speechPitchInput = document.getElementById('setting-speech-pitch');
+    const rateValLabel = document.getElementById('setting-rate-val');
+    const pitchValLabel = document.getElementById('setting-pitch-val');
+    const testVoiceBtn = document.getElementById('setting-test-voice-btn');
+
+    if (toggleAutoRead) {
+      toggleAutoRead.checked = SpeechHelper.autoReadEnabled;
+      toggleAutoRead.addEventListener('change', (e) => {
+        SpeechHelper.toggleAutoRead(e.target.checked);
+        this.showToast(`Auto Read: ${SpeechHelper.autoReadEnabled ? 'ENABLED' : 'DISABLED'}`);
+      });
+    }
+
+    if (speechRateInput && rateValLabel) {
+      speechRateInput.value = SpeechHelper.voiceProfile.settings.rate || 0.95;
+      rateValLabel.innerText = `${speechRateInput.value}x`;
+      speechRateInput.addEventListener('input', (e) => {
+        rateValLabel.innerText = `${e.target.value}x`;
+        SpeechHelper.voiceProfile.settings.rate = parseFloat(e.target.value);
+      });
+    }
+
+    if (speechPitchInput && pitchValLabel) {
+      speechPitchInput.value = SpeechHelper.voiceProfile.settings.pitch || 1.05;
+      pitchValLabel.innerText = `${speechPitchInput.value}`;
+      speechPitchInput.addEventListener('input', (e) => {
+        pitchValLabel.innerText = `${e.target.value}`;
+        SpeechHelper.voiceProfile.settings.pitch = parseFloat(e.target.value);
+      });
+    }
+
+    if (testVoiceBtn) {
+      testVoiceBtn.addEventListener('click', () => {
+        SpeechHelper.speak('Hello! Voice settings are configured with Fenn voice profile.');
+      });
+    }
+
+    const openSettings = () => {
+      if (modalSettings) {
+        if (toggleAutoRead) toggleAutoRead.checked = SpeechHelper.autoReadEnabled;
+        modalSettings.classList.remove('hidden');
+      }
+    };
+
+    const closeSettings = () => {
+      if (modalSettings) {
+        modalSettings.classList.add('hidden');
+        SpeechHelper.stop();
+      }
+    };
+
+    if (btnOpenSettings) btnOpenSettings.addEventListener('click', openSettings);
+    if (settingsCloseBtn) settingsCloseBtn.addEventListener('click', closeSettings);
+    if (settingsSaveBtn) settingsSaveBtn.addEventListener('click', closeSettings);
 
     // Sidebar tab buttons
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -286,25 +349,25 @@ class UIController {
       case 'INSPECT':
         this.updateTileInspector(tile, true);
         const district = gs.districts.find(d => d.id === tile.districtId);
-        SpeechHelper.speak(`Tile ${x}, ${y}. Neighborhood: ${district ? district.name : 'District ' + tile.districtId}. Value is ${tile.landValue} dollars.`);
+        SpeechHelper.speakIfAuto(`Tile ${x}, ${y}. Neighborhood: ${district ? district.name : 'District ' + tile.districtId}. Value is ${tile.landValue} dollars.`);
         break;
 
       case 'BUY_LAND':
         if (tile.isWater) {
           this.showToast('You cannot buy water tiles! Fish live here.', 'error');
-          SpeechHelper.speak('You cannot buy water tiles.');
+          SpeechHelper.speakIfAuto('You cannot buy water tiles.');
         } else if (tile.ownerId) {
           const owner = gs.firms.get(tile.ownerId);
           const isMine = (tile.ownerId === this.network.firmId);
           const msg = isMine ? 'You already own this land!' : `Owned by ${owner ? owner.name : 'another builder'}!`;
           this.showToast(msg, 'error');
-          SpeechHelper.speak(msg);
+          SpeechHelper.speakIfAuto(msg);
         } else {
           const cost = tile.landValue || 5000;
           const firm = gs.firms.get(this.network.firmId);
           if (firm && firm.cash < cost) {
             this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to buy this land.`, 'error');
-            SpeechHelper.speak(`You need ${cost.toLocaleString()} dollars to buy this land.`);
+            SpeechHelper.speakIfAuto(`You need ${cost.toLocaleString()} dollars to buy this land.`);
             return;
           }
           // Optimistic local update
@@ -313,7 +376,7 @@ class UIController {
             tile.ownerId = firm.id;
             this.updateHUD(gs, this.network.firmId);
             this.showToast(`🏷️ Purchased land at (${x}, ${y}) for $${cost.toLocaleString()}!`, 'success');
-            SpeechHelper.speak(`Purchased land parcel at ${x}, ${y}!`);
+            SpeechHelper.speakIfAuto(`Purchased land parcel at ${x}, ${y}!`);
           }
           this.network.buyLand(x, y);
         }
@@ -322,7 +385,7 @@ class UIController {
       case 'BUILD_RESIDENTIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
-          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+          SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
         } else if (tile.ownerId !== this.network.firmId) {
           this.showToast('You can only build on your own land!', 'error');
         } else {
@@ -333,7 +396,7 @@ class UIController {
       case 'BUILD_COMMERCIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
-          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+          SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
         } else if (tile.ownerId !== this.network.firmId) {
           this.showToast('You can only build on your own land!', 'error');
         } else {
@@ -344,7 +407,7 @@ class UIController {
       case 'BUILD_INDUSTRIAL':
         if (!tile.ownerId) {
           this.showToast('Buy this land first with the "Buy Land" button!', 'error');
-          SpeechHelper.speak('Buy this land first with the Buy Land button.');
+          SpeechHelper.speakIfAuto('Buy this land first with the Buy Land button.');
         } else if (tile.ownerId !== this.network.firmId) {
           this.showToast('You can only build on your own land!', 'error');
         } else {
@@ -886,8 +949,8 @@ class UIController {
     });
 
     this.modalMarginCall.classList.remove('hidden');
-    // Read aloud automatically for young students
-    SpeechHelper.speak(guidance.speechText || guidance.explanation);
+    // Only auto read if enabled in Settings
+    SpeechHelper.speakIfAuto(guidance.speechText || guidance.explanation);
   }
 
   showVetoModal(districtId, reason) {
@@ -906,7 +969,7 @@ class UIController {
     solEl.innerHTML = advice.solutions.map(s => `<div>${s}</div>`).join('');
 
     this.modalVeto.classList.remove('hidden');
-    SpeechHelper.speak(advice.speechText || advice.explanation);
+    SpeechHelper.speakIfAuto(advice.speechText || advice.explanation);
   }
 
   showToast(msg, type = 'info') {
@@ -939,13 +1002,13 @@ class UIController {
       if (isBuy) {
         if (myFirm.cash < totalCost) {
           this.showToast(`Not enough cash! Need $${totalCost.toLocaleString()}`, 'error');
-          SpeechHelper.speak('You do not have enough cash to buy those slices.');
+          SpeechHelper.speakIfAuto('You do not have enough cash to buy those slices.');
           return;
         }
         myFirm.cash -= totalCost;
         myFirm.shareHoldings[targetFirmId] = (myFirm.shareHoldings[targetFirmId] || 0) + count;
         this.showToast(`📈 Bought ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
-        SpeechHelper.speak(`Bought ${count} slices of ${targetFirm.name}.`);
+        SpeechHelper.speakIfAuto(`Bought ${count} slices of ${targetFirm.name}.`);
       } else {
         const owned = myFirm.shareHoldings[targetFirmId] || 0;
         if (owned < count) {
@@ -955,7 +1018,7 @@ class UIController {
         myFirm.cash += totalCost;
         myFirm.shareHoldings[targetFirmId] -= count;
         this.showToast(`📉 Sold ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
-        SpeechHelper.speak(`Sold ${count} slices of ${targetFirm.name}.`);
+        SpeechHelper.speakIfAuto(`Sold ${count} slices of ${targetFirm.name}.`);
       }
       this.updateHUD(this.network.gameState, this.network.firmId);
       this.renderStockMarketTab(this.network.gameState, myFirm);
@@ -966,7 +1029,7 @@ class UIController {
   takeover(targetFirmId) {
     const targetFirm = this.network.gameState.firms.get(targetFirmId);
     if (targetFirm) {
-      SpeechHelper.speak(`Attempting hostile takeover of ${targetFirm.name}!`);
+      SpeechHelper.speakIfAuto(`Attempting hostile takeover of ${targetFirm.name}!`);
     }
     this.network.hostileTakeover(targetFirmId);
   }
@@ -980,7 +1043,7 @@ class UIController {
 
       if (amount > available) {
         this.showToast(`Cannot borrow $${amount.toLocaleString()}! Max available limit is $${available.toLocaleString()}`, 'error');
-        SpeechHelper.speak(`Sorry, the bank cannot lend more than your safe limit of ${available.toLocaleString()} dollars.`);
+        SpeechHelper.speakIfAuto(`Sorry, the bank cannot lend more than your safe limit of ${available.toLocaleString()} dollars.`);
         return;
       }
 
@@ -992,7 +1055,7 @@ class UIController {
       this.renderMarginTab(this.network.gameState, firm);
 
       this.showToast(`💵 Borrowed $${amount.toLocaleString()}! Spendable Cash in Hand: $${Math.round(firm.cash).toLocaleString()}`, 'success');
-      SpeechHelper.speak(`You borrowed ${amount.toLocaleString()} dollars! Your cash is now ${Math.round(firm.cash).toLocaleString()} dollars.`);
+      SpeechHelper.speakIfAuto(`You borrowed ${amount.toLocaleString()} dollars! Your cash is now ${Math.round(firm.cash).toLocaleString()} dollars.`);
     }
     this.network.takeMarginLoan(amount);
   }
@@ -1008,7 +1071,7 @@ class UIController {
       const actualRepay = Math.min(amount, currentLoan, firm.cash);
       if (actualRepay <= 0) {
         this.showToast('Not enough cash in hand to pay back loan!', 'error');
-        SpeechHelper.speak('You do not have enough cash in hand to pay back the loan.');
+        SpeechHelper.speakIfAuto('You do not have enough cash in hand to pay back the loan.');
         return;
       }
 
@@ -1019,7 +1082,7 @@ class UIController {
       this.renderMarginTab(this.network.gameState, firm);
 
       this.showToast(`💳 Paid back $${actualRepay.toLocaleString()} of bank loan! Remaining Debt: $${firm.marginLoan.borrowedAmount.toLocaleString()}`, 'success');
-      SpeechHelper.speak(`Paid back ${actualRepay.toLocaleString()} dollars of debt.`);
+      SpeechHelper.speakIfAuto(`Paid back ${actualRepay.toLocaleString()} dollars of debt.`);
     }
     this.network.repayMarginLoan(amount);
   }
@@ -1028,7 +1091,7 @@ class UIController {
     const firm = this.network.gameState.firms.get(this.network.firmId);
     if (firm && firm.influencePoints < 50) {
       this.showToast('Need 50 Respect Points (⭐) to override a neighborhood veto!', 'error');
-      SpeechHelper.speak('You need 50 Respect Points to change the neighborhood leader mind.');
+      SpeechHelper.speakIfAuto('You need 50 Respect Points to change the neighborhood leader mind.');
       return;
     }
     this.network.overrideVeto(districtId);

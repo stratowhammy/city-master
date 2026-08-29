@@ -1,8 +1,9 @@
 // public/js/ui/SpeechHelper.js
-// Kid-Friendly Text-to-Speech (TTS) Engine supporting custom Voice Models (e.g., "Fenn")
+// Kid-Friendly Text-to-Speech (TTS) Engine supporting custom Voice Models (e.g., "Fenn") and Auto Read settings
 
 class SpeechHelper {
   static isSpeaking = false;
+  static autoReadEnabled = false; // Disabled by default! Enabled in Settings Menu
 
   // Active Voice Model Profile (Fenn v1.0)
   static voiceProfile = {
@@ -23,13 +24,28 @@ class SpeechHelper {
   static cachedVoices = [];
 
   static init() {
+    try {
+      // Check saved user preference (defaults to false)
+      SpeechHelper.autoReadEnabled = (localStorage.getItem('city_master_auto_read') === '1');
+    } catch (e) {
+      SpeechHelper.autoReadEnabled = false;
+    }
+
     if ('speechSynthesis' in window) {
       SpeechHelper.cachedVoices = window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
         SpeechHelper.cachedVoices = window.speechSynthesis.getVoices();
-        console.log(`🎙️ Loaded ${SpeechHelper.cachedVoices.length} speech voices. Selected model profile: "${SpeechHelper.voiceProfile.profile.name}"`);
       };
     }
+  }
+
+  static toggleAutoRead(enabled) {
+    SpeechHelper.autoReadEnabled = (enabled !== undefined) ? !!enabled : !SpeechHelper.autoReadEnabled;
+    try {
+      localStorage.setItem('city_master_auto_read', SpeechHelper.autoReadEnabled ? '1' : '0');
+    } catch (e) {}
+    console.log(`🎙️ Auto Read setting: ${SpeechHelper.autoReadEnabled ? 'ENABLED' : 'DISABLED'}`);
+    return SpeechHelper.autoReadEnabled;
   }
 
   // Load custom voice model profile JSON
@@ -51,7 +67,6 @@ class SpeechHelper {
           ...profileJson.profile
         }
       };
-      console.log(`🎙️ Updated TTS Voice Model to: ${SpeechHelper.voiceProfile.profile.name} (${SpeechHelper.voiceProfile.profile.language})`);
     }
   }
 
@@ -70,9 +85,7 @@ class SpeechHelper {
       v.name.toLowerCase().includes(targetName) ||
       (v.voiceURI && v.voiceURI.toLowerCase().includes(targetName))
     );
-    if (fennVoice) {
-      return fennVoice;
-    }
+    if (fennVoice) return fennVoice;
 
     // 2. High-quality natural English voice fallbacks configured with Fenn acoustic parameters
     const preferredEnglishVoices = [
@@ -93,10 +106,10 @@ class SpeechHelper {
       if (match) return match;
     }
 
-    // 3. Any English language voice
     return SpeechHelper.cachedVoices.find(v => v.lang.toLowerCase().startsWith(targetLang)) || SpeechHelper.cachedVoices[0] || null;
   }
 
+  // Explicit Speak (Triggered by user clicking a 🔊 speaker button)
   static speak(text) {
     if (!('speechSynthesis' in window)) {
       console.warn('Speech Synthesis not supported in this browser.');
@@ -113,7 +126,7 @@ class SpeechHelper {
     if (!cleanText) return;
 
     // Stop any ongoing speech
-    window.speechSynthesis.cancel();
+    SpeechHelper.stop();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = SpeechHelper.voiceProfile.settings.rate || 0.95;
@@ -143,8 +156,16 @@ class SpeechHelper {
     window.speechSynthesis.speak(utterance);
   }
 
+  // Conditional Auto Read (Only speaks if user enabled Auto Read in Settings)
+  static speakIfAuto(text) {
+    if (SpeechHelper.autoReadEnabled) {
+      SpeechHelper.speak(text);
+    }
+  }
+
   static currentAudio = null;
 
+  // Play pre-rendered audio file or fallback to TTS (Explicit Click)
   static playAudioOrSpeak(audioSrc, fallbackText) {
     SpeechHelper.stop();
     if (audioSrc) {
@@ -170,6 +191,13 @@ class SpeechHelper {
       });
     } else {
       SpeechHelper.speak(fallbackText);
+    }
+  }
+
+  // Conditional Auto Play Audio (Only plays if user enabled Auto Read in Settings)
+  static playAudioOrSpeakIfAuto(audioSrc, fallbackText) {
+    if (SpeechHelper.autoReadEnabled) {
+      SpeechHelper.playAudioOrSpeak(audioSrc, fallbackText);
     }
   }
 

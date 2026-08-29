@@ -677,7 +677,7 @@ function resetScenario(scenarioId) {
   }
 }
 
-// 20Hz Simulation and Broadcast Loop (50ms)
+// 10% Speed Simulation and Broadcast Loop (500ms = 2 Hz)
 let lastLoopTime = Date.now();
 setInterval(() => {
   const now = Date.now();
@@ -726,7 +726,7 @@ setInterval(() => {
 
     broadcast('DELTA_PATCH', deltaPacket);
   }
-}, 50);
+}, 500);
 
 server.listen(PORT, () => {
   console.log(`=======================================================`);

@@ -75,6 +75,9 @@ class UIController {
         document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
         const target = document.getElementById(`tab-${this.activeTab.toLowerCase()}`);
         if (target) target.classList.remove('hidden');
+        if (this.network.gameState) {
+          this.renderSidebar(this.network.gameState, this.network.firmId);
+        }
       });
     });
 
@@ -99,6 +102,7 @@ class UIController {
     });
 
     // Network Callbacks
+    this.lastSidebarRender = 0;
     this.network.callbacks.onInit = (state, firmId) => {
       this.updateHUD(state, firmId);
       this.renderSidebar(state, firmId);
@@ -106,7 +110,11 @@ class UIController {
 
     this.network.callbacks.onDelta = (state) => {
       this.updateHUD(state, this.network.firmId);
-      this.renderSidebar(state, this.network.firmId);
+      const now = Date.now();
+      if (now - this.lastSidebarRender >= 1000) {
+        this.lastSidebarRender = now;
+        this.renderSidebar(state, this.network.firmId);
+      }
       this.checkMarginAlerts(state, this.network.firmId);
     };
 
@@ -826,8 +834,46 @@ class UIController {
     el.scrollTop = el.scrollHeight;
   }
 
-  tradeStock(targetFirmId, count, isBuy) { this.network.tradeStock(targetFirmId, count, isBuy); }
-  takeover(targetFirmId) { this.network.hostileTakeover(targetFirmId); }
+  tradeStock(targetFirmId, count, isBuy) {
+    const myFirm = this.network.gameState.firms.get(this.network.firmId);
+    const targetFirm = this.network.gameState.firms.get(targetFirmId);
+    if (myFirm && targetFirm) {
+      const price = targetFirm.stock.price;
+      const totalCost = Math.round(price * count);
+      if (isBuy) {
+        if (myFirm.cash < totalCost) {
+          this.showToast(`Not enough cash! Need $${totalCost.toLocaleString()}`, 'error');
+          SpeechHelper.speak('You do not have enough cash to buy those slices.');
+          return;
+        }
+        myFirm.cash -= totalCost;
+        myFirm.shareHoldings[targetFirmId] = (myFirm.shareHoldings[targetFirmId] || 0) + count;
+        this.showToast(`📈 Bought ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
+        SpeechHelper.speak(`Bought ${count} slices of ${targetFirm.name}.`);
+      } else {
+        const owned = myFirm.shareHoldings[targetFirmId] || 0;
+        if (owned < count) {
+          this.showToast('You do not own that many slices to sell!', 'error');
+          return;
+        }
+        myFirm.cash += totalCost;
+        myFirm.shareHoldings[targetFirmId] -= count;
+        this.showToast(`📉 Sold ${count} slices of ${targetFirm.name} for $${totalCost.toLocaleString()}!`, 'success');
+        SpeechHelper.speak(`Sold ${count} slices of ${targetFirm.name}.`);
+      }
+      this.updateHUD(this.network.gameState, this.network.firmId);
+      this.renderStockMarketTab(this.network.gameState, myFirm);
+    }
+    this.network.tradeStock(targetFirmId, count, isBuy);
+  }
+
+  takeover(targetFirmId) {
+    const targetFirm = this.network.gameState.firms.get(targetFirmId);
+    if (targetFirm) {
+      SpeechHelper.speak(`Attempting hostile takeover of ${targetFirm.name}!`);
+    }
+    this.network.hostileTakeover(targetFirmId);
+  }
 
   borrow(amount) {
     const firm = this.network.gameState.firms.get(this.network.firmId);
@@ -882,10 +928,27 @@ class UIController {
     this.network.repayMarginLoan(amount);
   }
 
-  overrideVeto(districtId) { this.network.overrideVeto(districtId); }
-  buyRes(key, amt) { this.network.buyResource(key, amt); }
-  diplomacy() { this.network.mayorDiplomacy(); }
-  military() { this.network.mayorMilitary(); }
+  overrideVeto(districtId) {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    if (firm && firm.influencePoints < 50) {
+      this.showToast('Need 50 Respect Points (⭐) to override a neighborhood veto!', 'error');
+      SpeechHelper.speak('You need 50 Respect Points to change the neighborhood leader mind.');
+      return;
+    }
+    this.network.overrideVeto(districtId);
+  }
+
+  buyRes(key, amt) {
+    this.network.buyResource(key, amt);
+  }
+
+  diplomacy() {
+    this.network.mayorDiplomacy();
+  }
+
+  military() {
+    this.network.mayorMilitary();
+  }
 }
 
 window.UIController = UIController;

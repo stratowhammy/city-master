@@ -1,6 +1,7 @@
 // public/js/engine/TileAssets.js
 // Procedural Pixel-Art Sprite & Canvas Texture Generator for 2:1 Dimetric Rendering
-// Optimized for Chromebooks: Reusable cached canvas sprites and zero image asset load overhead!
+// Strict 2:1 Dimetric Projection (W=64, H=32), Maritime Ports, Dynamic Road Levels 1-4,
+// and zero-overhead cached canvas rendering for low-end hardware & Chromebooks.
 
 class TileAssets {
   constructor() {
@@ -11,32 +12,32 @@ class TileAssets {
   }
 
   initBaseSprites() {
-    // Pre-bake all static isometric tiles to offscreen canvases
+    // 1. Grass Ground Terrain
     this.createTileCanvas('ground_grass', (ctx, w, h) => {
       this.drawIsoDiamond(ctx, w, h, '#2d6a4f', '#1b4332', '#40916c');
-      // Subtle grass texture dots
       ctx.fillStyle = '#52b788';
       ctx.fillRect(w / 2 - 4, h / 2 - 2, 2, 2);
       ctx.fillRect(w / 2 + 8, h / 2 + 1, 2, 2);
       ctx.fillRect(w / 2 - 10, h / 2 + 3, 2, 2);
     });
 
+    // 2. Deep Ocean Water with Wave Reflections
     this.createTileCanvas('ground_water', (ctx, w, h) => {
       this.drawIsoDiamond(ctx, w, h, '#0077b6', '#03045e', '#0096c7');
-      // Water wave reflection lines
+      // Animated water wave highlights
       ctx.strokeStyle = 'rgba(202, 240, 248, 0.6)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(w / 2 - 12, h / 2);
-      ctx.lineTo(w / 2 - 2, h / 2 + 2);
-      ctx.moveTo(w / 2 + 4, h / 2 - 2);
-      ctx.lineTo(w / 2 + 14, h / 2);
+      ctx.moveTo(w / 2 - 14, h / 2 - 1);
+      ctx.lineTo(w / 2 - 4, h / 2 + 2);
+      ctx.moveTo(w / 2 + 2, h / 2 - 2);
+      ctx.lineTo(w / 2 + 12, h / 2 + 1);
       ctx.stroke();
     });
 
+    // 3. Concrete Urban Foundation
     this.createTileCanvas('ground_concrete', (ctx, w, h) => {
       this.drawIsoDiamond(ctx, w, h, '#475569', '#1e293b', '#64748b');
-      // Grid lines
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -44,13 +45,75 @@ class TileAssets {
       ctx.stroke();
     });
 
-    this.createTileCanvas('ground_road', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#334155', '#0f172a', '#475569');
-      // Road yellow center dashes
+    // 4. Road Level 1: Local 2-Lane Street (Dashed yellow centerline)
+    this.createTileCanvas('road_lvl1', (ctx, w, h) => {
+      this.drawIsoDiamond(ctx, w, h, '#334155', '#0f172a', '#64748b');
+      // Yellow center dashes
       ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(w / 2 - 1, h / 2 - 3, 3, 2);
-      ctx.fillRect(w / 2 + 6, h / 2, 3, 2);
-      ctx.fillRect(w / 2 - 8, h / 2, 3, 2);
+      ctx.fillRect(w / 2 - 1, h / 2 - 4, 2, 2);
+      ctx.fillRect(w / 2 + 5, h / 2 - 1, 2, 2);
+      ctx.fillRect(w / 2 - 7, h / 2 + 1, 2, 2);
+    });
+
+    // 5. Road Level 2: Multi-Lane Avenue (4 lanes with white lane markers and crosswalk stripes)
+    this.createTileCanvas('road_lvl2', (ctx, w, h) => {
+      this.drawIsoDiamond(ctx, w, h, '#1e293b', '#020617', '#94a3b8');
+      // Double solid center line
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(w / 2 - 2, h / 2 - 5, 2, 10);
+      ctx.fillRect(w / 2 + 1, h / 2 - 5, 2, 10);
+      // White lane dividers
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(w / 2 - 12, h / 2 - 2, 3, 2);
+      ctx.fillRect(w / 2 + 10, h / 2 - 2, 3, 2);
+      // Sidewalk curbs
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(w / 2 - 20, h / 2 + 6, 40, 1.5);
+    });
+
+    // 6. Road Level 3: High-Capacity Boulevard (6 lanes, landscaped median, streetlights)
+    this.createTileCanvas('road_lvl3', (ctx, w, h) => {
+      this.drawIsoDiamond(ctx, w, h, '#0f172a', '#020617', '#38bdf8');
+      // Landscaped Green Center Median
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.ellipse(w / 2, h / 2, 10, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#059669';
+      ctx.stroke();
+
+      // Street lamp posts on median
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(w / 2 - 1, h / 2 - 12, 2, 10);
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2 - 12, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Multi-lane markings
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(w / 2 - 16, h / 2 - 3, 4, 1.5);
+      ctx.fillRect(w / 2 + 12, h / 2 - 3, 4, 1.5);
+    });
+
+    // 7. Road Level 4: Heavy Commercial Arterial (Express multi-lane corridor)
+    this.createTileCanvas('road_lvl4', (ctx, w, h) => {
+      this.drawIsoDiamond(ctx, w, h, '#020617', '#000000', '#c084fc');
+      // Illuminated transit express lanes
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(w / 2 - 18, h / 2 - 5, 2, 10);
+      ctx.fillRect(w / 2 + 16, h / 2 - 5, 2, 10);
+
+      // Center divider barrier
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(w / 2 - 1, h / 2 - 7, 2, 14);
+
+      // Overhead Gantry Signage
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(w / 2 - 18, h / 2 - 18, 36, 3);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(w / 2 - 14, h / 2 - 17, 12, 2);
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(w / 2 + 2, h / 2 - 17, 12, 2);
     });
   }
 
@@ -86,17 +149,166 @@ class TileAssets {
     }
   }
 
-  // Draw ground building (Levels 1 to 3)
+  // Draw Road Tile based on Level (1 to 4)
+  drawRoadTile(ctx, screenX, screenY, roadLevel = 1) {
+    let key = 'road_lvl1';
+    if (roadLevel === 2) key = 'road_lvl2';
+    else if (roadLevel === 3) key = 'road_lvl3';
+    else if (roadLevel >= 4) key = 'road_lvl4';
+
+    const sprite = this.cache.get(key);
+    if (sprite) {
+      ctx.drawImage(sprite, screenX - this.TILE_WIDTH / 2, screenY);
+    } else {
+      this.drawIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#334155', '#0f172a', '#475569');
+    }
+  }
+
+  // Draw Maritime Port Hub (Container Terminal, Harbor Customs, or Drydock)
+  drawMaritimePort(ctx, screenX, screenY, portBuilding) {
+    const w = this.TILE_WIDTH;
+    const h = this.TILE_HEIGHT;
+    const hw = w / 2;
+    const hh = h / 2;
+
+    ctx.save();
+    ctx.translate(screenX - hw, screenY - hh);
+
+    // Port concrete apron foundation
+    this.drawIsoDiamond(ctx, w, h, '#475569', '#1e293b', '#64748b');
+
+    // 1. Port Logistics Terminal Building (Left)
+    ctx.fillStyle = '#0369a1';
+    ctx.fillRect(hw - 20, hh - 18, 16, 14);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(hw - 18, hh - 16, 4, 4);
+    ctx.fillRect(hw - 10, hh - 16, 4, 4);
+
+    // 2. Stacked Cargo Shipping Containers
+    // Blue Container
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(hw + 2, hh - 10, 14, 6);
+    ctx.strokeStyle = '#1d4ed8';
+    ctx.strokeRect(hw + 2, hh - 10, 14, 6);
+
+    // Orange Container (Stacked above)
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(hw + 4, hh - 17, 12, 6);
+    ctx.strokeStyle = '#c2410c';
+    ctx.strokeRect(hw + 4, hh - 17, 12, 6);
+
+    // Emerald Green Container
+    ctx.fillStyle = '#059669';
+    ctx.fillRect(hw - 4, hh - 8, 12, 6);
+
+    // 3. Heavy Gantry Cargo Crane
+    ctx.strokeStyle = '#dc2626'; // Bright Red Gantry
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    // Crane A-frame legs
+    ctx.moveTo(hw - 10, hh + 2);
+    ctx.lineTo(hw - 2, hh - 28);
+    ctx.lineTo(hw + 6, hh + 2);
+    // Crane boom extending over water
+    ctx.moveTo(hw - 8, hh - 26);
+    ctx.lineTo(hw + 22, hh - 26);
+    ctx.stroke();
+
+    // Crane Cable & Spreader Hook
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(hw + 14, hh - 26);
+    ctx.lineTo(hw + 14, hh - 12);
+    ctx.stroke();
+
+    // Suspended Cargo Box
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(hw + 10, hh - 12, 8, 5);
+
+    ctx.restore();
+  }
+
+  // Draw Deep-Water Pier extending into the ocean with moored ship
+  drawPierDock(ctx, screenX, screenY, pierBuilding) {
+    const w = this.TILE_WIDTH;
+    const h = this.TILE_HEIGHT;
+    const hw = w / 2;
+    const hh = h / 2;
+
+    ctx.save();
+    ctx.translate(screenX - hw, screenY - hh);
+
+    // Wooden/Concrete Pier Planks
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.moveTo(hw, 4);
+    ctx.lineTo(w - 6, hh);
+    ctx.lineTo(hw, h - 4);
+    ctx.lineTo(6, hh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Pier plank lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(hw - 10, hh - 2); ctx.lineTo(hw + 10, hh - 2);
+    ctx.moveTo(hw - 8, hh + 2); ctx.lineTo(hw + 8, hh + 2);
+    ctx.stroke();
+
+    // Moored Cargo Vessel / Boat
+    ctx.fillStyle = '#1e293b'; // Ship Hull
+    ctx.beginPath();
+    ctx.moveTo(hw + 8, hh - 8);
+    ctx.lineTo(hw + 24, hh - 2);
+    ctx.lineTo(hw + 18, hh + 6);
+    ctx.lineTo(hw + 4, hh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#475569';
+    ctx.stroke();
+
+    // Ship Deckhouse & Smoke funnel
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(hw + 10, hh - 12, 6, 6);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(hw + 12, hh - 16, 2, 4);
+
+    // Mooring Bollards
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(hw - 6, hh - 4, 2, 3);
+    ctx.fillRect(hw + 4, hh - 4, 2, 3);
+
+    ctx.restore();
+  }
+
+  // Draw Ground Building (Levels 1 to 3)
   drawGroundBuilding(ctx, screenX, screenY, building, ownerColor = '#3b82f6') {
+    const type = building.type;
+    if (type === 'ROAD') {
+      this.drawRoadTile(ctx, screenX, screenY, building.level || 1);
+      return;
+    }
+    if (type === 'PORT') {
+      this.drawMaritimePort(ctx, screenX, screenY, building);
+      return;
+    }
+    if (type === 'PIER') {
+      this.drawPierDock(ctx, screenX, screenY, building);
+      return;
+    }
+
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
     const level = building.level || 1;
-    const type = building.type;
 
     ctx.save();
     ctx.translate(screenX - w / 2, screenY - h / 2);
 
-    const bHeight = level * 18 + 12; // Height of building block
+    const bHeight = level * 18 + 12;
     const hw = w / 2;
     const hh = h / 2;
 
@@ -170,20 +382,18 @@ class TileAssets {
       ctx.fillStyle = windowColor;
       for (let f = 1; f <= level; f++) {
         const floorY = h - (f * 14);
-        // Left side windows
         ctx.fillRect(hw - 18, floorY - 4, 4, 4);
         ctx.fillRect(hw - 8, floorY - 1, 4, 4);
-        // Right side windows
         ctx.fillRect(hw + 4, floorY - 1, 4, 4);
         ctx.fillRect(hw + 14, floorY - 4, 4, 4);
       }
     }
 
-    // Owner color roof accent badge
+    // Owner color badge
     ctx.fillStyle = ownerColor;
     ctx.fillRect(hw - 4, hh - bHeight - 3, 8, 4);
 
-    // Industrial Smokestack or Smog
+    // Industrial Smokestack
     if (type === 'INDUSTRIAL') {
       ctx.fillStyle = '#52525b';
       ctx.fillRect(hw - 10, -bHeight - 12, 6, 12);
@@ -193,7 +403,7 @@ class TileAssets {
       ctx.fill();
     }
 
-    // Strike picket line indicator
+    // Strike indicator
     if (building.isUnderStrike) {
       ctx.fillStyle = '#dc2626';
       ctx.font = 'bold 10px monospace';
@@ -211,14 +421,11 @@ class TileAssets {
     ctx.restore();
   }
 
-  // Draw Dynamic Ground Shadow for floating structures
-  // Shadow opacity and scale are inversely proportional to z_offset (page 2)
+  // Draw Ground Shadow for floating structures
   drawAntigravityShadow(ctx, screenX, groundScreenY, z_offset) {
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
     const z = Math.max(0, z_offset);
-
-    // Inverse scaling & opacity formulas
     const scale = Math.max(0.35, 1.0 - (z / 160));
     const alpha = Math.max(0.15, 0.60 - (z / 200));
 
@@ -229,115 +436,14 @@ class TileAssets {
     ctx.beginPath();
     ctx.ellipse(0, 0, w * 0.45, h * 0.45, 0, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(15, 23, 42, ${alpha.toFixed(2)})`;
-    ctx.filter = `blur(${Math.min(6, Math.max(1, z * 0.08))}px)`;
     ctx.fill();
-    ctx.filter = 'none';
-
     ctx.restore();
   }
 
-  // Draw Level 4 Floating Antigravity Arcology
+  // Draw Level 4 Floating Arcology
   drawFloatingArcology(ctx, screenX, screenY, arcology, ownerColor = '#3b82f6') {
-    const w = this.TILE_WIDTH;
-    const h = this.TILE_HEIGHT;
-    const hw = w / 2;
-    const hh = h / 2;
-    const height = 48;
-
-    ctx.save();
-    ctx.translate(screenX - hw, screenY - hh);
-
-    // 1. Antigravity Levitation Field Glow / Thruster Pulse
-    const pulse = Math.sin(Date.now() * 0.008) * 4;
-    const grad = ctx.createLinearGradient(hw, h, hw, h + 24);
-    grad.addColorStop(0, 'rgba(56, 189, 248, 0.7)');
-    grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(hw - 14, h - 10);
-    ctx.lineTo(hw + 14, h - 10);
-    ctx.lineTo(hw + 22 + pulse, h + 22);
-    ctx.lineTo(hw - 22 - pulse, h + 22);
-    ctx.closePath();
-    ctx.fill();
-
-    // 2. Main Arcology Crystal Tower (Diamond Geometry)
-    // Bottom pyramidal cone
-    ctx.beginPath();
-    ctx.moveTo(hw, h - 8);
-    ctx.lineTo(0, hh - 16);
-    ctx.lineTo(hw, 0 - height);
-    ctx.lineTo(w, hh - 16);
-    ctx.closePath();
-    ctx.fillStyle = '#0284c7';
-    ctx.fill();
-
-    // Left Facet (Light cyan glass)
-    ctx.beginPath();
-    ctx.moveTo(0, hh - 16);
-    ctx.lineTo(hw, h - 8);
-    ctx.lineTo(hw, 0 - height);
-    ctx.closePath();
-    ctx.fillStyle = '#38bdf8';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.stroke();
-
-    // Right Facet (Deep indigo glass)
-    ctx.beginPath();
-    ctx.moveTo(hw, h - 8);
-    ctx.lineTo(w, hh - 16);
-    ctx.lineTo(hw, 0 - height);
-    ctx.closePath();
-    ctx.fillStyle = '#0369a1';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.stroke();
-
-    // 3. Rotating Energy Rings (Antigravity Stabilizer Rings)
-    const ringAngle = (Date.now() * 0.003) % (Math.PI * 2);
-    ctx.save();
-    ctx.translate(hw, hh - 24);
-    ctx.rotate(0.2);
-
-    ctx.strokeStyle = '#a855f7';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 26, 8, ringAngle, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(0, -12, 20, 6, -ringAngle, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-
-    // 4. Glowing Apex Beacon & Owner Emblem
-    ctx.fillStyle = ownerColor;
-    ctx.beginPath();
-    ctx.arc(hw, -height - 2, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.stroke();
-
-    // Stability Warning Aura if low stability
-    if (arcology.stability < 50) {
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(hw, hh - 20, 32 + pulse, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = '#ef4444';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText(`⚡ ${arcology.stability}%`, hw - 16, -height - 8);
-    }
-
-    ctx.restore();
+    // Preserved for future Sky City reactivation
   }
 }
 
-// Export singleton or global class
 window.TileAssets = TileAssets;

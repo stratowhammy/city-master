@@ -277,7 +277,8 @@ function handleClientMessage(client, msg) {
       if (tile && !tile.ownerId && !tile.isWater && firm.cash >= tile.landValue) {
         firm.cash -= tile.landValue;
         tile.ownerId = firm.id;
-        firm.totalLand++;
+        firm.totalLand = (firm.totalLand || 0) + 1;
+        gameState.updateRoadNetwork();
         gameState.markTileDirty(x, y);
         gameState.markFirmDirty(firm.id);
         sendToClient(client, 'ACTION_SUCCESS', { message: `Acquired land at (${x}, ${y}) for $${tile.landValue.toLocaleString()}` });
@@ -314,6 +315,7 @@ function handleClientMessage(client, msg) {
       }
 
       firm.cash -= cost;
+      firm.totalBuildings = (firm.totalBuildings || 0) + 1;
       tile.groundBuilding = {
         type: buildingType,
         level: 1,
@@ -333,6 +335,7 @@ function handleClientMessage(client, msg) {
         politicsEngine.grantTaxAbatement(firm.id, x, y, true);
       }
 
+      gameState.updateRoadNetwork();
       gameState.markTileDirty(x, y);
       gameState.markFirmDirty(firm.id);
       sendToClient(client, 'ACTION_SUCCESS', { message: `Constructed Level 1 ${buildingType}` });
@@ -360,6 +363,8 @@ function handleClientMessage(client, msg) {
       firm.cash -= cost;
       tile.groundBuilding.level = newLevel;
       tile.groundBuilding.name = `${firm.name.split(' ')[0]} ${tile.groundBuilding.type.toLowerCase()} L${newLevel}`;
+      
+      gameState.updateRoadNetwork();
       gameState.markTileDirty(x, y);
       gameState.markFirmDirty(firm.id);
       sendToClient(client, 'ACTION_SUCCESS', { message: `Upgraded structure to Level ${newLevel}` });
@@ -451,6 +456,7 @@ function handleClientMessage(client, msg) {
       } else if (tile.groundBuilding) {
         tile.groundBuilding = null;
       }
+      gameState.updateRoadNetwork();
       gameState.markTileDirty(x, y);
       gameState.markFirmDirty(firm.id);
       sendToClient(client, 'ACTION_SUCCESS', { message: 'Demolished structure' });

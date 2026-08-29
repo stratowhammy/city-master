@@ -1,5 +1,5 @@
 // test/simulation_test.js
-// Comprehensive test suite for all blueprint subsystems
+// Comprehensive test suite for all simulation subsystems
 
 const assert = require('node:assert');
 const GameState = require('../server/engine/GameState');
@@ -17,11 +17,39 @@ const state = new GameState();
 assert.strictEqual(state.gridSize, 60, 'Grid size must be 60x60');
 assert.strictEqual(state.firms.size, 50, 'Must have 50 firms initialized');
 assert.strictEqual(state.districts.length, 10, 'Must have 10 legislative districts');
-console.log('✅ Subsystem 1: GameState Initialization Passed (60x60 Grid, 50 Firms, 10 Districts)');
+assert.strictEqual(state.maritimePorts.length, 3, 'Must have 3 distinct maritime ports');
+console.log('✅ Subsystem 1: GameState Initialization Passed (60x60 Grid, 50 Firms, 10 Districts, 3 Ports)');
 
-// 2. Spatial Synergies & Cellular Automata
+// 2. Curving Coastline & Maritime Ports Verification
+assert(state.isOceanWater(30, 55), 'Deep southern coordinates must be ocean water');
+assert(!state.isOceanWater(30, 10), 'Northern inland coordinates must be land');
+const northPortTile = state.grid[12][44];
+assert.strictEqual(northPortTile.groundBuilding.type, 'PORT', 'North Port tile must contain a PORT building');
+console.log('✅ Subsystem 2: Curving Coastline & 3 Maritime Ports Verification Passed');
+
+// 3. Discrete Road Network & 3-Tile Outward Expansion Verification
+let roadCount = 0;
+let perimeterForSaleCount = 0;
+for (let x = 0; x < state.gridSize; x++) {
+  for (let y = 0; y < state.gridSize; y++) {
+    if (state.grid[x][y].roadLevel > 0) roadCount++;
+    if (state.grid[x][y].perimeterForSale) perimeterForSaleCount++;
+  }
+}
+assert(roadCount > 50, 'Road network must connect developed clusters and ports');
+assert(perimeterForSaleCount > 20, 'Adjacent unowned tiles must be marked perimeterForSale and priced');
+console.log(`✅ Subsystem 3: Road Network & 3-Tile Outward Expansion Passed (${roadCount} road tiles, ${perimeterForSaleCount} perimeter parcels)`);
+
+// 4. Dynamic Road Density Upgrades (Levels 1 to 4)
+// Place a Level 3 building at tile (30, 23) adjacent to connecting cross-avenue at (30, 22)
+state.grid[30][23].groundBuilding = { type: 'COMMERCIAL', level: 3, name: 'Commercial Tower' };
+state.updateRoadNetwork();
+const adjacentRoad = state.grid[30][22];
+assert.strictEqual(adjacentRoad.roadLevel, 3, 'Adjoining road must automatically upgrade to Level 3 Boulevard');
+console.log('✅ Subsystem 4: Automatic Road Density Visual Upgrades Passed (Upgraded to Level 3 Boulevard)');
+
+// 5. Spatial Synergies & Cellular Automata (Pollution, Traffic Synergies & Noise)
 const ca = new CellularAutomata(state);
-// Place dirty industrial building next to residential building
 state.grid[10][10].ownerId = 'firm_player_1';
 state.grid[10][10].zoning = 'INDUSTRIAL';
 state.grid[10][10].groundBuilding = {
@@ -59,9 +87,9 @@ state.grid[10][11].groundBuilding = {
 ca.update();
 assert(state.grid[10][11].pollution > 20, 'Adjacent residential tile must receive industrial pollution');
 assert(state.grid[10][11].groundBuilding.rentIncome < 240, 'Pollution must depress residential rent income');
-console.log(`✅ Subsystem 2: Cellular Automata & Indirect PvP Passed (Adjacent pollution: ${state.grid[10][11].pollution}%, Depressed Rent: $${state.grid[10][11].groundBuilding.rentIncome})`);
+console.log(`✅ Subsystem 5: Cellular Automata & Traffic Synergies Passed (Adjacent pollution: ${state.grid[10][11].pollution}%, Depressed Rent: $${state.grid[10][11].groundBuilding.rentIncome})`);
 
-// 3. Antigravity Physics, Z-Axis Elevation & Crash Dynamics
+// 6. Antigravity Physics, Z-Axis Elevation & Crash Dynamics
 const ag = new AntigravityEngine(state);
 state.grid[10][10].floatingBuilding = {
   type: 'ARCOLOGY',
@@ -83,11 +111,9 @@ state.grid[10][10].floatingBuilding = {
   residentsUsingFlyingTransit: true
 };
 
-// Update antigravity with bobbing
 ag.update(Date.now(), 50);
 assert(state.grid[10][10].floatingBuilding.current_z > 50, 'Arcology must maintain floating Z elevation');
 
-// Test resource starvation -> Crash!
 state.grid[10][10].floatingBuilding.stability = 0;
 ag.update(Date.now(), 50);
 ag.update(Date.now(), 50);
@@ -98,52 +124,47 @@ ag.update(Date.now(), 50);
 
 assert.strictEqual(state.grid[10][10].floatingBuilding, null, 'Unstable Arcology must crash and be destroyed');
 assert.strictEqual(state.grid[10][10].groundBuilding.type, 'RUINS', 'Crash must obliterate ground building beneath into RUINS');
-console.log('✅ Subsystem 3: Antigravity Physics & Crash Destruction Passed');
+console.log('✅ Subsystem 6: Antigravity Physics & Crash Destruction Passed');
 
-// 4. Municipal Politics, Councilmanic Prerogative & ZBA
+// 7. Municipal Politics, Councilmanic Prerogative & ZBA
 const politics = new PoliticsEngine(state);
-// District 6 is Radical Environmentalist (Tara Green) -> vetoes industrial building
 const checkVeto = politics.checkCouncilmanicPrerogative(6, 'firm_player_1', 'INDUSTRIAL', 3, false);
 assert.strictEqual(checkVeto.allowed, false, 'Environmentalist councilmember must veto industrial Level 3');
-console.log('✅ Subsystem 4A: Councilmanic Prerogative Unilateral Veto Passed');
+console.log('✅ Subsystem 7A: Councilmanic Prerogative Unilateral Veto Passed');
 
-// Submit ZBA variance
 const variance = politics.submitZBAVariance('firm_player_1', 15, 15, 'COMMERCIAL', 3);
 assert.strictEqual(state.municipal.pendingVariances.length, 1, 'Variance must be enqueued');
 variance.resolveTick = state.tick;
 politics.processZBAQueue();
 assert(['APPROVED', 'DENIED'].includes(variance.status), 'ZBA must resolve variance application');
-console.log(`✅ Subsystem 4B: Zoning Board of Adjustment (ZBA) 5-Member Review Passed (Status: ${variance.status})`);
+console.log(`✅ Subsystem 7B: Zoning Board of Adjustment (ZBA) 5-Member Review Passed (Status: ${variance.status})`);
 
-// 5. Macroeconomics & Foreign Export Controls
+// 8. Macroeconomics & Foreign Export Controls
 const macro = new MacroeconomicsEngine(state);
 macro.updateResourceSpotPrices();
 const initialRareEarthPrice = state.resources.rareEarth.spotPrice;
 state.municipal.foreignRelations.embargoActive = true;
 macro.updateResourceSpotPrices();
 assert(state.resources.rareEarth.spotPrice > initialRareEarthPrice, 'Foreign embargo must spike rare-earth spot price');
-console.log(`✅ Subsystem 5: Macroeconomic Exchange & Geopolitical Embargo Passed ($${initialRareEarthPrice} -> $${state.resources.rareEarth.spotPrice})`);
+console.log(`✅ Subsystem 8: Macroeconomic Exchange & Geopolitical Embargo Passed ($${initialRareEarthPrice} -> $${state.resources.rareEarth.spotPrice})`);
 
-// 6. Stock Market, Hostile Takeover & Automated 3-Tier Liquidation
+// 9. Stock Market, Hostile Takeover & Automated 3-Tier Liquidation
 const stock = new StockMarketEngine(state);
 stock.recalculateAllFirmValuations();
 const player = state.firms.get('firm_player_1');
-const rival = state.firms.get('firm_bot_3');
 assert(player.stock.price > 0, 'Firm stock price must be positive');
 assert(player.stock.nav > 0, 'Firm NAV must be positive');
 
-// Test Hostile Takeover (>50% shares)
 player.shareHoldings['firm_bot_3'] = 60000; // 60%
 state.grid[25][25].ownerId = 'firm_bot_3';
 const takeoverRes = stock.executeHostileTakeover('firm_player_1', 'firm_bot_3');
 assert.strictEqual(takeoverRes.success, true, 'Hostile takeover with >50% stake must succeed');
 assert.strictEqual(state.grid[25][25].ownerId, 'firm_player_1', 'Hostile takeover must transfer territory to acquirer');
-console.log('✅ Subsystem 6A: Stock Market NAV & Hostile Takeover Execution Passed');
+console.log('✅ Subsystem 9A: Stock Market NAV & Hostile Takeover Execution Passed');
 
-// Test Automated 3-Tier Liquidation
 player.marginLoan = { borrowedAmount: 3000000, collateralShares: 50000 };
 stock.processMarginAndLiquidation();
 assert(['MARGIN_CALL', 'LIQUIDATION'].includes(player.marginStatus), 'Overleveraged firm must trigger Margin Call / Liquidation');
-console.log(`✅ Subsystem 6B: Automated 3-Tier Liquidation Engine Passed (Status: ${player.marginStatus})`);
+console.log(`✅ Subsystem 9B: Automated 3-Tier Liquidation Engine Passed (Status: ${player.marginStatus})`);
 
-console.log('\n🎉 ALL 6 SUBSYSTEMS PASSED TEST VERIFICATION SUCCESSFULLY!');
+console.log('\n🎉 ALL SUBSYSTEMS PASSED TEST VERIFICATION SUCCESSFULLY!');

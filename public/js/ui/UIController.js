@@ -471,60 +471,97 @@ class UIController {
 
     const loan = myFirm.marginLoan ? myFirm.marginLoan.borrowedAmount : 0;
     const equity = myFirm.netWorth;
-    const ratio = myFirm.calculatedMarginRatio || 999;
-    const maxLeverage = Math.round(equity * 0.70);
+    const cash = myFirm.cash;
+    const maxLeverage = Math.max(0, Math.round(equity * 0.70));
+    const availableToBorrow = Math.max(0, maxLeverage - loan);
+    const loanPercentUsed = maxLeverage > 0 ? Math.min(100, Math.round((loan / maxLeverage) * 100)) : 0;
+    const safetyBufferPercent = 100 - loanPercentUsed;
 
-    const speechMargin = `Bank Piggy Bank and Safe Money Meter! Total company wealth is ${equity.toLocaleString()} dollars. You borrowed ${loan.toLocaleString()} dollars from the bank. Your safe money meter is ${ratio > 500 ? 'over 100 percent and very safe' : ratio + ' percent'}. Keep the meter in the green to protect your company from debt!`;
+    const speechMargin = `Bank Loans and Safe Money Meter! You have ${Math.round(cash).toLocaleString()} dollars in cash. You borrowed ${loan.toLocaleString()} dollars from the bank. Your company has ${equity.toLocaleString()} dollars in collateral wealth. You can still borrow up to ${availableToBorrow.toLocaleString()} dollars. Keep your safety meter in the green!`;
 
     let html = `
-      <div class="space-y-4 text-xs">
-        <div class="p-3 rounded-lg bg-slate-800/90 border border-slate-700 space-y-3">
+      <div class="space-y-3.5 text-xs">
+        <!-- Top Summary Card -->
+        <div class="p-3.5 rounded-xl bg-slate-800/95 border border-slate-700 space-y-3 shadow-lg">
           <div class="flex justify-between items-center">
-            <span class="text-xs text-slate-300 font-bold uppercase">🏦 Bank Loans & Safe Money Meter</span>
+            <span class="text-xs text-sky-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              🏦 Bank Loans & Collateral
+            </span>
             <button class="tts-btn" onclick="SpeechHelper.speak('${speechMargin.replace(/'/g, "\\'")}')" title="Read Aloud">🔊 Read</button>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
-            <div class="p-2 rounded bg-slate-900">
-              <span class="text-slate-400 block text-[10px]">💎 Total Wealth:</span>
-              <span class="text-base font-bold text-emerald-400">$${equity.toLocaleString()}</span>
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+              <span class="text-slate-400 block text-[10px] font-bold">💵 Cash in Hand (Spendable):</span>
+              <span class="text-base font-black text-emerald-400">$${Math.round(cash).toLocaleString()}</span>
             </div>
-            <div class="p-2 rounded bg-slate-900">
-              <span class="text-slate-400 block text-[10px]">💳 Bank Debt (Borrowed):</span>
-              <span class="text-base font-bold text-rose-400">$${loan.toLocaleString()}</span>
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+              <span class="text-slate-400 block text-[10px] font-bold">💳 Bank Debt (Borrowed):</span>
+              <span class="text-base font-black ${loan > 0 ? 'text-rose-400' : 'text-slate-400'}">$${loan.toLocaleString()}</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+              <span class="text-slate-400 block text-[10px] font-bold">💎 Total Collateral Wealth:</span>
+              <span class="text-sm font-bold text-indigo-300">$${equity.toLocaleString()}</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+              <span class="text-slate-400 block text-[10px] font-bold">🛡️ Max Can Still Borrow:</span>
+              <span class="text-sm font-bold text-sky-400">$${availableToBorrow.toLocaleString()}</span>
             </div>
           </div>
 
-          <div class="space-y-1">
+          <!-- Safe Money Health Bar -->
+          <div class="space-y-1.5 pt-1">
             <div class="flex justify-between text-[11px]">
-              <span class="text-slate-300 font-semibold">Safe Money Meter:</span>
-              <span class="font-bold ${ratio >= 130 ? 'text-emerald-400' : (ratio >= 110 ? 'text-amber-400' : 'text-rose-500')}">${ratio > 500 ? '100% (PERFECT)' : ratio + '%'}</span>
+              <span class="text-slate-300 font-bold">Safety Buffer:</span>
+              <span class="font-black ${safetyBufferPercent >= 50 ? 'text-emerald-400' : (safetyBufferPercent >= 20 ? 'text-amber-400' : 'text-rose-500')}">
+                ${safetyBufferPercent}% Safe Buffer (${loanPercentUsed}% Loan Used)
+              </span>
             </div>
             <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
-              <div class="h-2 rounded-full ${ratio >= 130 ? 'bg-emerald-500' : (ratio >= 110 ? 'bg-amber-500' : 'bg-rose-600')}" style="width: ${Math.min(100, Math.max(5, ratio / 2))}%"></div>
+              <div class="h-2 rounded-full ${safetyBufferPercent >= 50 ? 'bg-emerald-500' : (safetyBufferPercent >= 20 ? 'bg-amber-500' : 'bg-rose-600')}" style="width: ${Math.max(5, safetyBufferPercent)}%"></div>
             </div>
             <div class="flex justify-between text-[9px] text-slate-400 font-semibold">
-              <span class="text-rose-400">🔴 Debt Danger</span>
-              <span class="text-amber-400">🟡 Watch Out</span>
+              <span class="text-rose-400">🔴 High Debt (Danger)</span>
+              <span class="text-amber-400">🟡 Moderate Loan</span>
               <span class="text-emerald-400">🟢 Super Safe</span>
             </div>
           </div>
         </div>
 
-        <div class="p-3 rounded-lg bg-slate-800/90 border border-slate-700 space-y-2">
-          <div class="font-bold text-slate-200">Borrow or Pay Back Loan</div>
-          <div class="text-[11px] text-slate-300">You can borrow up to: <span class="text-sky-400 font-bold">$${Math.max(0, maxLeverage - loan).toLocaleString()}</span></div>
-          <div class="flex gap-2 pt-1">
-            <button onclick="window.ui.borrow(25000)" class="flex-1 py-1.5 font-bold rounded bg-sky-600 hover:bg-sky-500 text-white">Borrow $25,000</button>
-            <button onclick="window.ui.repay(25000)" class="flex-1 py-1.5 font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white" ${loan <= 0 ? 'disabled' : ''}>Pay Back $25,000</button>
+        <!-- Borrow Quick Actions -->
+        <div class="p-3 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2">
+          <div class="font-bold text-slate-200 flex justify-between items-center">
+            <span>➕ Borrow Cash against Stock</span>
+            <span class="text-[10px] text-slate-400 font-normal">70% Loan-to-Value Limit</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="window.ui.borrow(10000)" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs shadow transition-all ${availableToBorrow < 10000 ? 'opacity-50 cursor-not-allowed' : ''}">+$10,000</button>
+            <button onclick="window.ui.borrow(25000)" class="py-2 px-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs shadow transition-all ${availableToBorrow < 25000 ? 'opacity-50 cursor-not-allowed' : ''}">+$25,000</button>
+            <button onclick="window.ui.borrow(50000)" class="py-2 px-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow transition-all ${availableToBorrow < 50000 ? 'opacity-50 cursor-not-allowed' : ''}">+$50,000</button>
           </div>
         </div>
 
-        <div class="p-3 rounded-lg bg-indigo-950/50 border border-indigo-800/50 space-y-1 text-slate-300 text-[11px]">
-          <div class="font-bold text-indigo-300">📖 Safe Money Rules:</div>
-          <p>• <strong>🟢 Green (130%+):</strong> You are super safe!</p>
-          <p>• <strong>🟡 Yellow (110%-130%):</strong> Your buffer is getting thin. Pay back some loan!</p>
-          <p>• <strong>🔴 Red (Under 110%):</strong> Debt warning! Building is frozen until you pay back money.</p>
+        <!-- Repay Quick Actions -->
+        <div class="p-3 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2">
+          <div class="font-bold text-slate-200 flex justify-between items-center">
+            <span>➖ Pay Back Bank Debt</span>
+            <span class="text-[10px] text-slate-400 font-normal">Current Debt: $${loan.toLocaleString()}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="window.ui.repay(10000)" class="py-2 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs shadow transition-all ${loan <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">-$10,000</button>
+            <button onclick="window.ui.repay(25000)" class="py-2 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs shadow transition-all ${loan <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">-$25,000</button>
+            <button onclick="window.ui.repay(${loan})" class="py-2 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow transition-all ${loan <= 0 ? 'opacity-50 cursor-not-allowed' : ''}">Pay All Debt</button>
+          </div>
+        </div>
+
+        <!-- 5th Grade Pedagogical Rule Card -->
+        <div class="p-3 rounded-xl bg-indigo-950/60 border border-indigo-700/60 space-y-1 text-slate-200 text-[11px] leading-relaxed">
+          <div class="font-extrabold text-indigo-300 flex items-center gap-1">
+            <span>💡 How Borrowing Against Stock Works:</span>
+          </div>
+          <p>• When you click <strong>Borrow $25,000</strong>, the bank gives you <strong>$25,000 in cash</strong> right into your wallet.</p>
+          <p>• Your <strong>Total Wealth</strong> stays the same because cash (+25k) and bank debt (-25k) balance out.</p>
+          <p>• Use your new cash to buy land and build high-rise towers that earn rent!</p>
         </div>
       </div>
     `;
@@ -791,8 +828,60 @@ class UIController {
 
   tradeStock(targetFirmId, count, isBuy) { this.network.tradeStock(targetFirmId, count, isBuy); }
   takeover(targetFirmId) { this.network.hostileTakeover(targetFirmId); }
-  borrow(amount) { this.network.takeMarginLoan(amount); }
-  repay(amount) { this.network.repayMarginLoan(amount); }
+
+  borrow(amount) {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    if (firm) {
+      const maxLeverage = Math.max(0, Math.round(firm.netWorth * 0.70));
+      const currentLoan = firm.marginLoan ? firm.marginLoan.borrowedAmount : 0;
+      const available = Math.max(0, maxLeverage - currentLoan);
+
+      if (amount > available) {
+        this.showToast(`Cannot borrow $${amount.toLocaleString()}! Max available limit is $${available.toLocaleString()}`, 'error');
+        SpeechHelper.speak(`Sorry, the bank cannot lend more than your safe limit of ${available.toLocaleString()} dollars.`);
+        return;
+      }
+
+      // Optimistic client update for instant response
+      firm.cash += amount;
+      if (!firm.marginLoan) firm.marginLoan = { borrowedAmount: 0, collateralShares: 0 };
+      firm.marginLoan.borrowedAmount += amount;
+      this.updateHUD(this.network.gameState, this.network.firmId);
+      this.renderMarginTab(this.network.gameState, firm);
+
+      this.showToast(`💵 Borrowed $${amount.toLocaleString()}! Spendable Cash in Hand: $${Math.round(firm.cash).toLocaleString()}`, 'success');
+      SpeechHelper.speak(`You borrowed ${amount.toLocaleString()} dollars! Your cash is now ${Math.round(firm.cash).toLocaleString()} dollars.`);
+    }
+    this.network.takeMarginLoan(amount);
+  }
+
+  repay(amount) {
+    const firm = this.network.gameState.firms.get(this.network.firmId);
+    if (firm) {
+      const currentLoan = firm.marginLoan ? firm.marginLoan.borrowedAmount : 0;
+      if (currentLoan <= 0) {
+        this.showToast('You have no bank debt to pay back!', 'info');
+        return;
+      }
+      const actualRepay = Math.min(amount, currentLoan, firm.cash);
+      if (actualRepay <= 0) {
+        this.showToast('Not enough cash in hand to pay back loan!', 'error');
+        SpeechHelper.speak('You do not have enough cash in hand to pay back the loan.');
+        return;
+      }
+
+      // Optimistic client update
+      firm.cash -= actualRepay;
+      firm.marginLoan.borrowedAmount -= actualRepay;
+      this.updateHUD(this.network.gameState, this.network.firmId);
+      this.renderMarginTab(this.network.gameState, firm);
+
+      this.showToast(`💳 Paid back $${actualRepay.toLocaleString()} of bank loan! Remaining Debt: $${firm.marginLoan.borrowedAmount.toLocaleString()}`, 'success');
+      SpeechHelper.speak(`Paid back ${actualRepay.toLocaleString()} dollars of debt.`);
+    }
+    this.network.repayMarginLoan(amount);
+  }
+
   overrideVeto(districtId) { this.network.overrideVeto(districtId); }
   buyRes(key, amt) { this.network.buyResource(key, amt); }
   diplomacy() { this.network.mayorDiplomacy(); }

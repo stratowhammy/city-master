@@ -11,7 +11,10 @@ class IsometricRenderer {
     this.TILE_HEIGHT = 32;
 
     this.camera = { x: 0, y: -480, zoom: 0.85 };
-    this.overlayMode = 'NORMAL'; // 'NORMAL', 'UNOWNED', 'POLLUTION', 'LAND_VALUE', 'ZONING', 'DISTRICTS', 'ANTIGRAVITY'
+    this.overlayMode = 'NORMAL'; // 'NORMAL', 'UNOWNED', 'POLLUTION', 'LAND_VALUE', 'ZONING', 'DISTRICTS'
+    
+    // Feature Flag: Sky Cities disabled (preserved for future reactivation)
+    this.ENABLE_SKY_CITIES = false;
 
     this.hoveredTile = null;
     this.selectedTile = null;
@@ -92,7 +95,7 @@ class IsometricRenderer {
         this.renderTileOverlay(ctx, tile, screenPos, localPlayerFirmId, gameState);
 
         // D. Antigravity Shadow (if floating building exists above)
-        if (tile.floatingBuilding) {
+        if (this.ENABLE_SKY_CITIES && tile.floatingBuilding) {
           const curZ = tile.floatingBuilding.current_z || tile.floatingBuilding.z_offset || 64;
           this.assets.drawAntigravityShadow(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, curZ);
           floatingDrawQueue.push({ tile, x, y, screenPos });
@@ -126,20 +129,22 @@ class IsometricRenderer {
     }
 
     // 2. Render Floating Antigravity Arcologies (Z-Axis Layer)
-    for (const item of floatingDrawQueue) {
-      const { tile, screenPos } = item;
-      const arcology = tile.floatingBuilding;
-      const curZ = arcology.current_z || arcology.z_offset || 64;
-      const floatingScreenY = screenPos.y + (this.TILE_HEIGHT / 2) - curZ;
-      const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
-      const ownerColor = firm ? firm.color : '#38bdf8';
+    if (this.ENABLE_SKY_CITIES) {
+      for (const item of floatingDrawQueue) {
+        const { tile, screenPos } = item;
+        const arcology = tile.floatingBuilding;
+        const curZ = arcology.current_z || arcology.z_offset || 64;
+        const floatingScreenY = screenPos.y + (this.TILE_HEIGHT / 2) - curZ;
+        const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
+        const ownerColor = firm ? firm.color : '#38bdf8';
 
-      this.assets.drawFloatingArcology(ctx, screenPos.x, floatingScreenY, arcology, ownerColor);
-    }
+        this.assets.drawFloatingArcology(ctx, screenPos.x, floatingScreenY, arcology, ownerColor);
+      }
 
-    // 3. Render Floating Transit Lines ONLY when Antigravity Overlay is active
-    if (this.overlayMode === 'ANTIGRAVITY') {
-      this.renderFlyingTransit(ctx, gameState);
+      // 3. Render Floating Transit Lines ONLY when Antigravity Overlay is active
+      if (this.overlayMode === 'ANTIGRAVITY') {
+        this.renderFlyingTransit(ctx, gameState);
+      }
     }
 
     ctx.restore();

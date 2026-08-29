@@ -367,6 +367,11 @@ function handleClientMessage(client, msg) {
     }
 
     case 'CONSTRUCT_ARCOLOGY': {
+      // Sky City feature disabled (preserved for future reactivation)
+      sendToClient(client, 'ACTION_ERROR', { message: 'Sky Cities are currently disabled.' });
+      break;
+
+      /*
       const { x, y, unionBuilt } = payload;
       const tile = gameState.grid[x] && gameState.grid[x][y];
       if (!tile || tile.ownerId !== firm.id || tile.floatingBuilding) return;
@@ -432,6 +437,7 @@ function handleClientMessage(client, msg) {
       gameState.markFirmDirty(firm.id);
       sendToClient(client, 'ACTION_SUCCESS', { message: 'Level 4 Antigravity Arcology deployed and hovering at Z=64!' });
       break;
+      */
     }
 
     case 'DEMOLISH': {

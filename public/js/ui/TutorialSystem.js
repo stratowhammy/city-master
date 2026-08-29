@@ -133,23 +133,24 @@ class TutorialSystem {
         }
       },
       {
-        id: 'SKY_CITIES',
+        id: 'UPGRADE_BUILDINGS',
         stepNum: 7,
-        audioSrc: 'audio/tutorial/step7.wav',
-        speaker: 'Dr. Aris Thorne (Voiced by Fenn)',
-        avatar: '🛸',
-        title: 'Step 7 of 8: Launching Floating Sky Cities!',
-        speech: 'Now for the coolest technology in the game: Floating Sky Cities! These level 4 mega structures float high up at Z equals 64 in the clouds. They escape all ground smoke and earn massive rent, but they need Super Floating Crystals every day!',
+        speaker: 'Sal "Wrench" Sullivan (Voiced by Fenn)',
+        avatar: '🏗️',
+        title: 'Step 7 of 8: Upgrading to High-Rise Towers!',
+        speech: 'Now let us make your buildings bigger! Click the Upgrade button at the bottom and click on your house to upgrade it to a Level 2 and Level 3 high-rise tower. Taller buildings hold more families and double your rent profit!',
         body: `
-          <p>🛸 <strong>Floating Sky Cities (Arcology Level 4)</strong> hover in the vertical sky!</p>
-          <p class="mt-1">✨ They are completely immune to ground smoke and pollution.</p>
-          <p class="mt-1">🔮 They require <strong>Super Floating Crystals</strong> from the Materials tab. If you run out of crystals, they will gently fall and crash!</p>
+          <p>🏗️ <strong>High-Rise Upgrades:</strong> Make your existing buildings taller and more profitable!</p>
+          <p class="mt-1">🏢 <strong>Level 2 & Level 3:</strong> Earn double and triple rent income on the exact same piece of land.</p>
+          <div class="p-2.5 rounded bg-sky-950/60 border border-sky-600/50 mt-2">
+            💡 <em>Tip: Upgrading existing land is often cheaper than buying new land parcels!</em>
+          </div>
         `,
-        goal: 'Learn about futuristic antigravity sky cities.',
+        goal: 'Learn how to upgrade buildings into towers.',
         buttonText: 'Next Step 👉',
         onStart: () => {
-          const tab = document.querySelector('[data-tab="RESOURCES"]');
-          if (tab) tab.click();
+          const upBtn = document.querySelector('[data-tool="UPGRADE"]');
+          if (upBtn) upBtn.click();
         }
       },
       {

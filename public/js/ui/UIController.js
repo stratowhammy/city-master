@@ -265,11 +265,15 @@ class UIController {
         break;
 
       case 'BUILD_ARCOLOGY':
+        // Sky City feature disabled (preserved for future reactivation)
+        this.showToast('Sky Cities are currently disabled.', 'info');
+        /*
         if (!tile.ownerId) {
           this.showToast('You must own the ground below before launching a Floating Sky City!', 'error');
         } else {
           this.network.constructArcology(x, y, this.unionPledge);
         }
+        */
         break;
 
       case 'UPGRADE':

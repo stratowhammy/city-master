@@ -1,6 +1,6 @@
 // public/js/engine/IsometricRenderer.js
-// 32-Bit Retro Dimetric Isometric Renderer (64x32) with Organic Black Void Map Expansion
-// Features pitch-black void rendering, adjacent frontier lot unlocking, and 32-bit retro graphics.
+// SimCity 2000 4-Way Rotatable Dimetric Isometric Renderer (64x32) with Organic Black Void Map Expansion
+// Supports 0°, 90°, 180°, 270° views with seamless coordinate transformation and land assembly highlighting.
 
 class IsometricRenderer {
   constructor(canvas, assets) {
@@ -12,6 +12,7 @@ class IsometricRenderer {
     this.TILE_HEIGHT = 32;
 
     this.camera = { x: 0, y: -480, zoom: 0.85 };
+    this.rotation = 0; // 0 = 0° (North/South), 1 = 90° (East), 2 = 180° (South/North), 3 = 270° (West)
     this.overlayMode = 'NORMAL'; // 'NORMAL', 'LAND_VALUE', 'POLLUTION', 'UNOWNED', 'ZONING', 'DISTRICTS'
 
     // Feature Flag: Sky Cities disabled (preserved for future reactivation)
@@ -30,6 +31,10 @@ class IsometricRenderer {
     this.selectedTile = null;
     this.activeTool = 'INSPECT';
 
+    // Contiguous Land Assembly Highlighting for Multi-Tile Building Upgrades
+    this.assemblyFootprint = [];
+    this.assemblyMissing = [];
+
     this.initCanvasSize();
     window.addEventListener('resize', () => this.initCanvasSize());
   }
@@ -40,25 +45,61 @@ class IsometricRenderer {
     this.ctx.imageSmoothingEnabled = false;
   }
 
-  // Convert Grid (x, y, z) -> Screen Coordinates (Strict 2:1 Dimetric)
-  gridToScreen(gx, gy, gz = 0) {
-    const screenX = (gx - gy) * (this.TILE_WIDTH / 2);
-    const screenY = (gx + gy) * (this.TILE_HEIGHT / 2) - gz;
+  // Rotate Actual Grid Coordinates (gx, gy) -> Rotated Virtual Grid Coordinates (rx, ry)
+  rotateGridCoords(gx, gy, rotation = this.rotation, gridSize = 60) {
+    const rot = ((rotation % 4) + 4) % 4;
+    if (rot === 0) return { rx: gx, ry: gy };
+    if (rot === 1) return { rx: gy, ry: gridSize - 1 - gx };
+    if (rot === 2) return { rx: gridSize - 1 - gx, ry: gridSize - 1 - gy };
+    if (rot === 3) return { rx: gridSize - 1 - gy, ry: gx };
+    return { rx: gx, ry: gy };
+  }
+
+  // Unrotate Virtual Grid Coordinates (rx, ry) -> Actual Grid Coordinates (gx, gy)
+  unrotateGridCoords(rx, ry, rotation = this.rotation, gridSize = 60) {
+    const rot = ((rotation % 4) + 4) % 4;
+    if (rot === 0) return { gx: rx, gy: ry };
+    if (rot === 1) return { gx: gridSize - 1 - ry, gy: rx };
+    if (rot === 2) return { gx: gridSize - 1 - rx, gy: gridSize - 1 - ry };
+    if (rot === 3) return { gx: ry, gy: gridSize - 1 - rx };
+    return { gx: rx, gy: ry };
+  }
+
+  // Convert Grid (gx, gy, gz) -> Screen Coordinates taking current map rotation into account
+  gridToScreen(gx, gy, gz = 0, gridSize = 60) {
+    const { rx, ry } = this.rotateGridCoords(gx, gy, this.rotation, gridSize);
+    const screenX = (rx - ry) * (this.TILE_WIDTH / 2);
+    const screenY = (rx + ry) * (this.TILE_HEIGHT / 2) - gz;
     return { x: screenX, y: screenY };
   }
 
-  // Convert Screen (px, py) -> Grid Coordinates
-  screenToGrid(screenX, screenY) {
+  // Convert Screen (px, py) -> Grid Coordinates taking current map rotation into account
+  screenToGrid(screenX, screenY, gridSize = 60) {
     const worldX = (screenX - this.canvas.width / 2) / this.camera.zoom - this.camera.x;
     const worldY = (screenY - this.canvas.height / 2) / this.camera.zoom - this.camera.y;
 
     const halfW = this.TILE_WIDTH / 2;
     const halfH = this.TILE_HEIGHT / 2;
 
-    const gx = (worldX / halfW + worldY / halfH) / 2;
-    const gy = (worldY / halfH - worldX / halfW) / 2;
+    const rx = Math.floor((worldX / halfW + worldY / halfH) / 2);
+    const ry = Math.floor((worldY / halfH - worldX / halfW) / 2);
 
-    return { x: Math.floor(gx), y: Math.floor(gy) };
+    const { gx, gy } = this.unrotateGridCoords(rx, ry, this.rotation, gridSize);
+    return { x: gx, y: gy };
+  }
+
+  // 4-Way Rotation Controls
+  rotateClockwise() {
+    this.rotation = (this.rotation + 1) % 4;
+  }
+
+  rotateCounterClockwise() {
+    this.rotation = (this.rotation + 3) % 4;
+  }
+
+  getCompassBearing() {
+    const bearings = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
+    return bearings[this.rotation];
   }
 
   // Organic Frontier Visibility Check:
@@ -128,27 +169,30 @@ class IsometricRenderer {
     const halfW = this.TILE_WIDTH / 2;
     const halfH = this.TILE_HEIGHT / 2;
 
-    // 2. Strict Viewport Bounding Box Culling (Chromebook Performance Optimization)
+    // 2. Strict Viewport Bounding Box Culling in Rotated Space
     const invZoom = 1 / this.camera.zoom;
     const wLeft = (-width / 2) * invZoom - this.camera.x;
     const wRight = (width / 2) * invZoom - this.camera.x;
     const wTop = (-height / 2) * invZoom - this.camera.y;
     const wBottom = (height / 2) * invZoom - this.camera.y;
 
-    const gTop = { x: (wLeft / halfW + wTop / halfH) / 2, y: (wTop / halfH - wLeft / halfW) / 2 };
-    const gRight = { x: (wRight / halfW + wTop / halfH) / 2, y: (wTop / halfH - wRight / halfW) / 2 };
-    const gBottom = { x: (wRight / halfW + wBottom / halfH) / 2, y: (wBottom / halfH - wRight / halfW) / 2 };
-    const gLeft = { x: (wLeft / halfW + wBottom / halfH) / 2, y: (wBottom / halfH - wLeft / halfW) / 2 };
+    const gTop = { rx: (wLeft / halfW + wTop / halfH) / 2, ry: (wTop / halfH - wLeft / halfW) / 2 };
+    const gRight = { rx: (wRight / halfW + wTop / halfH) / 2, ry: (wTop / halfH - wRight / halfW) / 2 };
+    const gBottom = { rx: (wRight / halfW + wBottom / halfH) / 2, ry: (wBottom / halfH - wRight / halfW) / 2 };
+    const gLeft = { rx: (wLeft / halfW + wBottom / halfH) / 2, ry: (wBottom / halfH - wLeft / halfW) / 2 };
 
     const margin = 4;
-    const minSum = Math.max(0, Math.floor(Math.min(gTop.x + gTop.y, gRight.x + gRight.y, gBottom.x + gBottom.y, gLeft.x + gLeft.y) - margin));
-    const maxSum = Math.min((gridSize - 1) * 2, Math.ceil(Math.max(gTop.x + gTop.y, gRight.x + gRight.y, gBottom.x + gBottom.y, gLeft.x + gLeft.y) + margin));
+    const minSum = Math.max(0, Math.floor(Math.min(gTop.rx + gTop.ry, gRight.rx + gRight.ry, gBottom.rx + gBottom.ry, gLeft.rx + gLeft.ry) - margin));
+    const maxSum = Math.min((gridSize - 1) * 2, Math.ceil(Math.max(gTop.rx + gTop.ry, gRight.rx + gRight.ry, gBottom.rx + gBottom.ry, gLeft.rx + gLeft.ry) + margin));
 
-    // 3. Render Culled Grid in Isometric Painter's Order (sum = x + y)
+    // 3. Render Culled Grid in Isometric Painter's Order (sum = rx + ry)
     for (let sum = minSum; sum <= maxSum; sum++) {
-      for (let x = 0; x <= sum; x++) {
-        const y = sum - x;
-        if (x >= gridSize || y >= gridSize || y < 0) continue;
+      for (let rx = 0; rx <= sum; rx++) {
+        const ry = sum - rx;
+        if (rx >= gridSize || ry >= gridSize || ry < 0) continue;
+
+        // Unrotate virtual (rx, ry) to get actual grid (x, y)
+        const { gx: x, gy: y } = this.unrotateGridCoords(rx, ry, this.rotation, gridSize);
 
         // ORGANIC BLACK BACKGROUND EXPANSION GATE:
         // If tile is beyond immediate neighboring unpurchased lots, completely skip rendering!
@@ -159,7 +203,10 @@ class IsometricRenderer {
         const tile = gameState.grid[x] && gameState.grid[x][y];
         if (!tile) continue;
 
-        const screenPos = this.gridToScreen(x, y, 0);
+        const screenPos = {
+          x: (rx - ry) * halfW,
+          y: (rx + ry) * halfH
+        };
 
         // A. SimCity 2000 Base Ground Terrain & Water
         this.assets.drawTerrain(ctx, screenPos.x, screenPos.y, tile, x, y);
@@ -221,7 +268,28 @@ class IsometricRenderer {
           }
         }
 
-        // E. Highlight Hovered / Selected Tile (Only on visible revealed frontier tiles)
+        // E. Contiguous Land Assembly Highlighting for Multi-Tile Building Expansions
+        if (this.assemblyFootprint && this.assemblyFootprint.some(p => p.x === x && p.y === y)) {
+          const isMissing = this.assemblyMissing && this.assemblyMissing.some(m => m.x === x && m.y === y);
+          if (isMissing) {
+            // Pulsating Amber / Cyan Warning Outline for needed expansion land
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3.5;
+            this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
+            this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
+            this.drawTileBadge(ctx, screenPos.x, screenPos.y, '⚠️ ASSEMBLE LAND', '#78350f', '#fde68a');
+          } else {
+            // Bright Green Outline for assembled parts
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3.0;
+            this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+            this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
+          }
+        }
+
+        // F. Highlight Hovered / Selected Tile (Only on visible revealed frontier tiles)
         if (this.hoveredTile && this.hoveredTile.x === x && this.hoveredTile.y === y) {
           ctx.strokeStyle = '#38bdf8';
           ctx.lineWidth = 3.0;

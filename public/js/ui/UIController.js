@@ -262,11 +262,97 @@ class UIController {
       });
     });
 
+    // 4-Way Map Rotation buttons
+    const btnRotateCw = document.getElementById('btn-rotate-cw');
+    const btnRotateCcw = document.getElementById('btn-rotate-ccw');
+    if (btnRotateCw) {
+      btnRotateCw.addEventListener('click', () => {
+        this.renderer.rotateClockwise();
+        this.updateCompass();
+      });
+    }
+    if (btnRotateCcw) {
+      btnRotateCcw.addEventListener('click', () => {
+        this.renderer.rotateCounterClockwise();
+        this.updateCompass();
+      });
+    }
+
+    // Keyboard Shortcuts for 4-Way Map Rotation
+    window.addEventListener('keydown', (e) => {
+      const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (e.key === 'q' || e.key === 'Q' || e.key === '[') {
+        this.renderer.rotateCounterClockwise();
+        this.updateCompass();
+      } else if (e.key === 'e' || e.key === 'E' || e.key === ']') {
+        this.renderer.rotateClockwise();
+        this.updateCompass();
+      }
+    });
+
+    // Land Bidding Deal Type Switcher
+    const bidTypeBtns = document.querySelectorAll('.bid-type-btn');
+    this.selectedBidType = 'CASH';
+    bidTypeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        bidTypeBtns.forEach(b => {
+          b.classList.remove('active', 'bg-sky-600', 'border-sky-400', 'text-white');
+          b.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
+        });
+        btn.classList.add('active', 'bg-sky-600', 'border-sky-400', 'text-white');
+        btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
+        this.selectedBidType = btn.dataset.type;
+
+        document.getElementById('bid-panel-cash')?.classList.toggle('hidden', this.selectedBidType !== 'CASH');
+        document.getElementById('bid-panel-stock')?.classList.toggle('hidden', this.selectedBidType !== 'STOCK');
+        document.getElementById('bid-panel-joint')?.classList.toggle('hidden', this.selectedBidType !== 'JOINT_VENTURE');
+      });
+    });
+
+    // Stock share price calculation
+    const stockInput = document.getElementById('bid-stock-input');
+    if (stockInput) {
+      stockInput.addEventListener('input', () => {
+        const myFirm = this.network.gameState?.firms?.get(this.network.firmId);
+        const price = myFirm?.stock?.price || 15;
+        const shares = Number(stockInput.value) || 0;
+        const calcEl = document.getElementById('bid-stock-val-calc');
+        if (calcEl) calcEl.innerText = `$${Math.round(shares * price).toLocaleString()}`;
+      });
+    }
+
+    // Equity slider display
+    const equityInput = document.getElementById('bid-equity-input');
+    if (equityInput) {
+      equityInput.addEventListener('input', () => {
+        const valEl = document.getElementById('bid-equity-val');
+        if (valEl) valEl.innerText = `${equityInput.value}%`;
+      });
+    }
+
+    // Send Bid Button
+    const bidSendBtn = document.getElementById('bid-send-btn');
+    if (bidSendBtn) {
+      bidSendBtn.addEventListener('click', () => {
+        if (!this.activeBidTarget) return;
+        const { tileX, tileY, ownerId } = this.activeBidTarget;
+        const cashAmount = Number(document.getElementById('bid-cash-input')?.value) || 0;
+        const stockShares = Number(document.getElementById('bid-stock-input')?.value) || 0;
+        const equityPercent = Number(document.getElementById('bid-equity-input')?.value) || 25;
+
+        this.network.sendLandBid(tileX, tileY, ownerId, this.selectedBidType, cashAmount, stockShares, equityPercent);
+        document.getElementById('modal-land-bid')?.classList.add('hidden');
+        this.showToast(`Acquisition offer sent for parcel (${tileX}, ${tileY})!`, 'info');
+      });
+    }
+
     // Network Callbacks
     this.lastSidebarRender = 0;
     this.network.callbacks.onInit = (state, firmId) => {
       this.updateHUD(state, firmId);
       this.renderSidebar(state, firmId);
+      this.updateCompass();
     };
 
     this.network.callbacks.onDelta = (state) => {
@@ -292,6 +378,26 @@ class UIController {
 
     this.network.callbacks.onChat = (chat) => {
       this.appendChatMessage(chat);
+    };
+
+    this.network.callbacks.onCheckUpgradeLandResult = (data) => {
+      if (!data.valid) {
+        this.showLandAssemblyModal(data.tileX, data.tileY, data.targetLevel, data);
+      } else {
+        this.network.upgradeBuilding(data.tileX, data.tileY);
+      }
+    };
+
+    this.network.callbacks.onLandBidReceived = (data) => {
+      this.handleLandBidReceived(data);
+    };
+
+    this.network.callbacks.onLandBidCountered = (data) => {
+      this.handleLandBidCountered(data);
+    };
+
+    this.network.callbacks.onLandBidResolved = (data) => {
+      this.handleLandBidResolved(data);
     };
 
     // Chat input
@@ -625,6 +731,16 @@ class UIController {
           this.showToast('This building is already at Maximum Level 3 High-Rise!', 'info');
         } else {
           const newLvl = tile.groundBuilding.level + 1;
+
+          // Contiguous Land Assembly Check for Multi-Tile Building Expansions
+          if (this.network.gameState && this.network.gameState.verifyContiguousLand) {
+            const landCheck = this.network.gameState.verifyContiguousLand(x, y, newLvl, this.network.firmId);
+            if (landCheck && !landCheck.valid) {
+              this.showLandAssemblyModal(x, y, newLvl, landCheck);
+              return;
+            }
+          }
+
           const cost = newLvl * 25000;
           if (firm && firm.cash < cost) {
             this.showToast(`Need $${cost.toLocaleString()} to upgrade to Level ${newLvl}!`, 'error');
@@ -1968,6 +2084,162 @@ class UIController {
 
   military() {
     this.network.mayorMilitary();
+  }
+
+  updateCompass() {
+    const elCompass = document.getElementById('hud-compass');
+    if (!elCompass) return;
+    const icons = ['N ▲', 'E ▶', 'S ▼', 'W ◀'];
+    elCompass.innerText = icons[this.renderer.rotation] || 'N ▲';
+  }
+
+  showLandAssemblyModal(x, y, targetLevel, checkResult) {
+    const modal = document.getElementById('modal-land-assembly');
+    const targetLevelEl = document.getElementById('assembly-target-level');
+    const footprintSizeEl = document.getElementById('assembly-footprint-size');
+    const missingCountEl = document.getElementById('assembly-missing-count');
+    const tilesListEl = document.getElementById('assembly-tiles-list');
+
+    if (targetLevelEl) targetLevelEl.innerText = `Level ${targetLevel}`;
+    if (footprintSizeEl) footprintSizeEl.innerText = targetLevel === 2 ? '2x2 (4 Parcels)' : '3x3 (9 Parcels)';
+    if (missingCountEl) missingCountEl.innerText = `${checkResult.missingTiles.length} lot(s) needed`;
+
+    // Highlight missing parcels on the map
+    this.renderer.assemblyFootprint = checkResult.footprint || [];
+    this.renderer.assemblyMissing = checkResult.missingTiles || [];
+
+    if (tilesListEl) {
+      tilesListEl.innerHTML = '';
+      checkResult.missingTiles.forEach(tile => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center';
+        const isUnowned = !tile.isOwnedByOther;
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-white text-xs">Parcel (${tile.x}, ${tile.y})</div>
+            <div class="text-[11px] text-slate-400">Owner: <span class="${isUnowned ? 'text-emerald-400' : 'text-sky-300'} font-semibold">${tile.ownerName}</span></div>
+            <div class="text-[11px] text-amber-400 font-mono">Appraisal: $${tile.landValue.toLocaleString()}</div>
+          </div>
+          <div>
+            ${isUnowned ? `
+              <button class="py-1 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow" onclick="window.uiController.buyAssemblyTile(${tile.x}, ${tile.y})">
+                💵 Buy Land ($${tile.landValue.toLocaleString()})
+              </button>
+            ` : `
+              <button class="py-1 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow flex items-center gap-1" onclick="window.uiController.openLandBidModal(${tile.x}, ${tile.y}, '${tile.ownerId}', '${tile.ownerName}', ${tile.landValue})">
+                📡 Ping Owner with Offer
+              </button>
+            `}
+          </div>
+        `;
+        tilesListEl.appendChild(item);
+      });
+    }
+
+    if (modal) modal.classList.remove('hidden');
+    SpeechHelper.speakIfAuto(`Building expansion to Level ${targetLevel} requires assembling ${checkResult.missingTiles.length} adjacent parcels.`);
+  }
+
+  buyAssemblyTile(x, y) {
+    this.network.buyLand(x, y);
+    this.showToast(`Purchased parcel (${x}, ${y}) for land assembly!`, 'success');
+    const modal = document.getElementById('modal-land-assembly');
+    if (modal) modal.classList.add('hidden');
+    this.renderer.assemblyFootprint = [];
+    this.renderer.assemblyMissing = [];
+  }
+
+  openLandBidModal(tileX, tileY, ownerId, ownerName, landValue) {
+    this.activeBidTarget = { tileX, tileY, ownerId, ownerName, landValue };
+    const modal = document.getElementById('modal-land-bid');
+    const locEl = document.getElementById('bid-target-location');
+    const ownerEl = document.getElementById('bid-target-owner');
+    const valEl = document.getElementById('bid-target-val');
+    const cashInput = document.getElementById('bid-cash-input');
+
+    if (locEl) locEl.innerText = `Parcel (${tileX}, ${tileY})`;
+    if (ownerEl) ownerEl.innerText = ownerName || 'Rival Tycoon';
+    if (valEl) valEl.innerText = `$${landValue.toLocaleString()}`;
+    if (cashInput) cashInput.value = Math.round(landValue * 1.25);
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  handleLandBidReceived(data) {
+    const alertEl = document.getElementById('alert-incoming-bid');
+    const detailsEl = document.getElementById('incoming-bid-details');
+    const acceptBtn = document.getElementById('incoming-bid-accept-btn');
+    const counterBtn = document.getElementById('incoming-bid-counter-btn');
+    const rejectBtn = document.getElementById('incoming-bid-reject-btn');
+
+    if (!alertEl || !detailsEl) return;
+
+    const bid = data.bid;
+    let offerDesc = '';
+    if (bid.offerType === 'CASH') {
+      offerDesc = `💵 Cash Offer: <strong class="text-emerald-400 font-mono">$${Number(bid.cashAmount).toLocaleString()}</strong>`;
+    } else if (bid.offerType === 'STOCK') {
+      offerDesc = `📈 Stock Offer: <strong class="text-sky-400 font-mono">${Number(bid.stockShares).toLocaleString()} shares</strong> of ${data.fromFirmName}`;
+    } else {
+      offerDesc = `🤝 Joint Venture: <strong class="text-indigo-400 font-mono">${Number(bid.equityPercent)}% equity stake</strong> in future building revenue`;
+    }
+
+    detailsEl.innerHTML = `
+      <div><strong>${data.fromFirmName}</strong> wants to acquire your lot at <span class="font-mono text-amber-300">(${data.tileX}, ${data.tileY})</span> for building assembly!</div>
+      <div class="p-1.5 rounded bg-slate-950 border border-slate-800 mt-1">${offerDesc}</div>
+    `;
+
+    alertEl.classList.remove('hidden');
+    SpeechHelper.speakIfAuto(`Incoming acquisition offer from ${data.fromFirmName} on parcel ${data.tileX}, ${data.tileY}!`);
+
+    if (acceptBtn) {
+      acceptBtn.onclick = () => {
+        this.network.respondLandBid(bid.id, 'ACCEPT');
+        alertEl.classList.add('hidden');
+      };
+    }
+
+    if (counterBtn) {
+      counterBtn.onclick = () => {
+        const counterCash = prompt('Enter your counteroffer cash price ($):', Math.round((bid.cashAmount || 5000) * 1.3));
+        if (counterCash) {
+          this.network.respondLandBid(bid.id, 'COUNTER', { counterCash: Number(counterCash) });
+          alertEl.classList.add('hidden');
+        }
+      };
+    }
+
+    if (rejectBtn) {
+      rejectBtn.onclick = () => {
+        this.network.respondLandBid(bid.id, 'REJECT');
+        alertEl.classList.add('hidden');
+      };
+    }
+  }
+
+  handleLandBidCountered(data) {
+    this.showToast(`💬 Counteroffer received from owner: ${data.message || 'Counterbid proposed'}`, 'info');
+    SpeechHelper.speakIfAuto(`Counterbid received: ${data.message}`);
+    const modal = document.getElementById('modal-land-bid');
+    if (modal && data.counterCash) {
+      const cashInput = document.getElementById('bid-cash-input');
+      if (cashInput) cashInput.value = data.counterCash;
+      modal.classList.remove('hidden');
+    }
+  }
+
+  handleLandBidResolved(data) {
+    if (data.status === 'ACCEPTED') {
+      this.showToast(`🎉 Deal Finalized! ${data.message || 'Land acquired successfully!'}`, 'success');
+      SpeechHelper.speakIfAuto(`Deal finalized! Land acquired successfully.`);
+      this.renderer.assemblyFootprint = [];
+      this.renderer.assemblyMissing = [];
+    } else {
+      this.showToast(`✕ Land Bid Declined: ${data.message || 'Owner rejected offer.'}`, 'error');
+      SpeechHelper.speakIfAuto(`Land bid declined.`);
+    }
+    const alertEl = document.getElementById('alert-incoming-bid');
+    if (alertEl) alertEl.classList.add('hidden');
   }
 }
 

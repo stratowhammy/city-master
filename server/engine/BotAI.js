@@ -8,9 +8,13 @@ class BotAI {
     this.stock = stockEngine;
     this.macro = macroEngine;
     this.antigravity = antigravityEngine;
+    this.enabled = false; // Autonomous player bots disabled by default
   }
 
   update() {
+    // If autonomous bot execution is disabled, do nothing
+    if (!this.enabled) return;
+
     // Only run bot logic every 15 ticks (~7.5s) to conserve CPU
     if (this.gameState.tick % 15 !== 0) return;
 
@@ -200,6 +204,71 @@ class BotAI {
         }
       }
     }
+  }
+
+  // Evaluate incoming land acquisition bids from players/firms
+  evaluateLandBid(bid) {
+    const tile = this.gameState.grid[bid.tileX] && this.gameState.grid[bid.tileX][bid.tileY];
+    if (!tile) return { action: 'REJECT', message: 'Invalid property location.' };
+
+    const baselineValue = Math.max(3000, tile.landValue || tile.basePrice || 5000);
+
+    if (bid.offerType === 'CASH') {
+      const offeredCash = Number(bid.cashAmount) || 0;
+      if (offeredCash >= baselineValue * 1.25) {
+        return {
+          action: 'ACCEPT',
+          message: `Offer accepted! Property acquired for $${offeredCash.toLocaleString()}.`
+        };
+      } else if (offeredCash >= baselineValue * 0.85) {
+        const counter = Math.round(baselineValue * 1.35);
+        return {
+          action: 'COUNTER',
+          counterCash: counter,
+          message: `Counterbid: Property available for $${counter.toLocaleString()}.`
+        };
+      } else {
+        return {
+          action: 'REJECT',
+          message: `Offer of $${offeredCash.toLocaleString()} rejected (property appraisal is $${baselineValue.toLocaleString()}).`
+        };
+      }
+    } else if (bid.offerType === 'STOCK') {
+      const bidderFirm = this.gameState.firms.get(bid.fromFirmId);
+      const sharePrice = bidderFirm && bidderFirm.stock ? bidderFirm.stock.price : 50;
+      const shares = Number(bid.stockShares) || 0;
+      const totalStockVal = shares * sharePrice;
+
+      if (totalStockVal >= baselineValue * 1.20) {
+        return {
+          action: 'ACCEPT',
+          message: `Stock swap accepted! Exchanged land parcel for ${shares.toLocaleString()} shares of ${bidderFirm ? bidderFirm.name : 'Bidder Stock'}.`
+        };
+      } else {
+        const neededShares = Math.ceil((baselineValue * 1.35) / Math.max(1, sharePrice));
+        return {
+          action: 'COUNTER',
+          counterShares: neededShares,
+          message: `Counterbid: We require ${neededShares.toLocaleString()} shares of stock for this parcel.`
+        };
+      }
+    } else if (bid.offerType === 'JOINT_VENTURE') {
+      const equity = Number(bid.equityPercent) || 0;
+      if (equity >= 20) {
+        return {
+          action: 'ACCEPT',
+          message: `Joint-venture partnership established! Contributing parcel for ${equity}% equity stake in future development revenue.`
+        };
+      } else {
+        return {
+          action: 'COUNTER',
+          counterEquity: 25,
+          message: `Counterbid: We require a minimum of 25% joint-venture equity stake to contribute this parcel.`
+        };
+      }
+    }
+
+    return { action: 'REJECT', message: 'Offer could not be evaluated.' };
   }
 }
 

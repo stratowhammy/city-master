@@ -507,6 +507,110 @@ function handleClientMessage(client, msg) {
       break;
     }
 
+    case 'CHECK_UPGRADE_LAND': {
+      const { x, y, targetLevel } = payload;
+      const res = gameState.verifyContiguousLand(x, y, targetLevel, firm.id);
+      sendToClient(client, 'CHECK_UPGRADE_LAND_RESULT', { tileX: x, tileY: y, targetLevel, ...res });
+      break;
+    }
+
+    case 'LAND_BID_OFFER': {
+      const { tileX, tileY, toFirmId, offerType, cashAmount, stockShares, equityPercent } = payload;
+      const tile = gameState.grid[tileX] && gameState.grid[tileX][tileY];
+      if (!tile) {
+        sendToClient(client, 'ACTION_ERROR', { message: 'Invalid parcel coordinates.' });
+        break;
+      }
+      const targetFirm = gameState.firms.get(toFirmId || tile.ownerId);
+      if (!targetFirm) {
+        sendToClient(client, 'ACTION_ERROR', { message: 'Target owner firm not found.' });
+        break;
+      }
+
+      const bid = gameState.createLandBid({
+        tileX,
+        tileY,
+        fromFirmId: firm.id,
+        toFirmId: targetFirm.id,
+        offerType,
+        cashAmount,
+        stockShares,
+        equityPercent
+      });
+
+      // If target owner is another connected human player, notify them in real time
+      let humanNotified = false;
+      for (const [cSocket, cData] of clients.entries()) {
+        if (cData.firmId === targetFirm.id) {
+          sendToClient(cData, 'LAND_BID_RECEIVED', {
+            bid,
+            fromFirmName: firm.name,
+            fromFirmColor: firm.color,
+            tileX,
+            tileY
+          });
+          humanNotified = true;
+        }
+      }
+
+      // If target owner is NPC / Bot, evaluate automatically via BotAI
+      if (!targetFirm.isHuman || !humanNotified) {
+        const evaluation = botAI.evaluateLandBid(bid);
+        if (evaluation.action === 'ACCEPT') {
+          const tradeRes = gameState.respondLandBid(bid.id, 'ACCEPT');
+          sendToClient(client, 'LAND_BID_RESOLVED', {
+            bid,
+            status: 'ACCEPTED',
+            message: evaluation.message,
+            tradeRes
+          });
+        } else if (evaluation.action === 'COUNTER') {
+          const counterRes = gameState.respondLandBid(bid.id, 'COUNTER', evaluation);
+          sendToClient(client, 'LAND_BID_COUNTERED', {
+            bid,
+            status: 'COUNTERED',
+            message: evaluation.message,
+            counterCash: evaluation.counterCash,
+            counterShares: evaluation.counterShares,
+            counterEquity: evaluation.counterEquity
+          });
+        } else {
+          gameState.respondLandBid(bid.id, 'REJECT');
+          sendToClient(client, 'LAND_BID_RESOLVED', {
+            bid,
+            status: 'REJECTED',
+            message: evaluation.message
+          });
+        }
+      } else {
+        sendToClient(client, 'ACTION_SUCCESS', { message: `Land acquisition offer sent to ${targetFirm.name}!` });
+      }
+      break;
+    }
+
+    case 'LAND_BID_RESPOND': {
+      const { bidId, action, counterCash, counterShares, counterEquity, message } = payload;
+      const res = gameState.respondLandBid(bidId, action, { counterCash, counterShares, counterEquity, message });
+      if (!res.success) {
+        sendToClient(client, 'ACTION_ERROR', { message: res.error || 'Failed to respond to bid.' });
+        break;
+      }
+
+      const bid = res.bid;
+      // Notify both parties of resolution or counter
+      for (const [cSocket, cData] of clients.entries()) {
+        if (cData.firmId === bid.fromFirmId || cData.firmId === bid.toFirmId) {
+          sendToClient(cData, action === 'COUNTER' ? 'LAND_BID_COUNTERED' : 'LAND_BID_RESOLVED', {
+            bid,
+            status: res.status,
+            tradeResult: res.tradeResult,
+            message: message || (action === 'ACCEPT' ? 'Deal finalized and ownership transferred!' : 'Bid declined.')
+          });
+        }
+      }
+      break;
+    }
+
     case 'ZBA_VARIANCE_REQUEST': {
       const { x, y, requestedZoning, proposedLevel } = payload;
       const app = politicsEngine.submitZBAVariance(firm.id, x, y, requestedZoning, proposedLevel);

@@ -163,6 +163,14 @@ class NetworkClient {
       if (this.callbacks.onActionError) this.callbacks.onActionError(data);
     } else if (type === 'CHAT_BROADCAST') {
       if (this.callbacks.onChat) this.callbacks.onChat(data);
+    } else if (type === 'CHECK_UPGRADE_LAND_RESULT') {
+      if (this.callbacks.onCheckUpgradeLandResult) this.callbacks.onCheckUpgradeLandResult(data);
+    } else if (type === 'LAND_BID_RECEIVED') {
+      if (this.callbacks.onLandBidReceived) this.callbacks.onLandBidReceived(data);
+    } else if (type === 'LAND_BID_COUNTERED') {
+      if (this.callbacks.onLandBidCountered) this.callbacks.onLandBidCountered(data);
+    } else if (type === 'LAND_BID_RESOLVED') {
+      if (this.callbacks.onLandBidResolved) this.callbacks.onLandBidResolved(data);
     }
   }
 
@@ -172,6 +180,13 @@ class NetworkClient {
   setZoning(x, y, zoning) { this.send('SET_ZONING', { x, y, zoning }); }
   constructBuilding(x, y, buildingType, unionBuilt) { this.send('CONSTRUCT_BUILDING', { x, y, buildingType, unionBuilt }); }
   upgradeBuilding(x, y) { this.send('UPGRADE_BUILDING', { x, y }); }
+  checkUpgradeLand(x, y, targetLevel) { this.send('CHECK_UPGRADE_LAND', { x, y, targetLevel }); }
+  sendLandBid(tileX, tileY, toFirmId, offerType, cashAmount, stockShares, equityPercent) {
+    this.send('LAND_BID_OFFER', { tileX, tileY, toFirmId, offerType, cashAmount, stockShares, equityPercent });
+  }
+  respondLandBid(bidId, action, counterData = {}) {
+    this.send('LAND_BID_RESPOND', { bidId, action, ...counterData });
+  }
   constructArcology(x, y, unionBuilt) { this.send('CONSTRUCT_ARCOLOGY', { x, y, unionBuilt }); }
   demolish(x, y) { this.send('DEMOLISH', { x, y }); }
   submitZBAVariance(x, y, requestedZoning, proposedLevel) { this.send('ZBA_VARIANCE_REQUEST', { x, y, requestedZoning, proposedLevel }); }

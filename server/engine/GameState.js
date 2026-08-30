@@ -83,39 +83,40 @@ class GameState {
       isNPC: true
     }));
 
-    // 3 Distinct Maritime Ports Definitions along the curved coastline
+    // 3 Distinct Maritime Ports Definitions
     this.maritimePorts = [
       {
         id: 'port_north',
         name: '⚓ North Port (Container Freight Terminal)',
         x: 12,
-        y: 46,
+        y: 44,
         type: 'CONTAINER_TERMINAL',
-        pierTiles: [{ x: 12, y: 47 }, { x: 12, y: 48 }, { x: 13, y: 47 }],
+        pierTiles: [{ x: 12, y: 45 }, { x: 12, y: 46 }, { x: 13, y: 46 }],
         economicBonus: { industrial: 1.25, tradeVolume: 450 }
       },
       {
         id: 'port_central',
         name: '⚓ Central Harbor (Commercial Ferry & Deep-Water Pier)',
         x: 30,
-        y: 48,
+        y: 45,
         type: 'COMMERCIAL_HARBOR',
-        pierTiles: [{ x: 30, y: 49 }, { x: 30, y: 50 }, { x: 29, y: 49 }],
+        pierTiles: [{ x: 30, y: 46 }, { x: 30, y: 47 }, { x: 29, y: 46 }],
         economicBonus: { commercial: 1.30, tourism: 500 }
       },
       {
         id: 'port_south',
         name: '⚓ South Marine Terminal (Shipbuilding & Drydock)',
         x: 48,
-        y: 46,
+        y: 44,
         type: 'NAVAL_DRYDOCK',
-        pierTiles: [{ x: 48, y: 47 }, { x: 48, y: 48 }, { x: 47, y: 47 }],
+        pierTiles: [{ x: 48, y: 45 }, { x: 48, y: 46 }, { x: 47, y: 45 }],
         economicBonus: { industrial: 1.20, heavyCargo: 380 }
       }
     ];
 
     this.firms = new Map();
     this.grid = [];
+    this.activeLandBids = new Map(); // bidId -> LandBid
     this.initGrid();
     this.initFirms();
 
@@ -131,8 +132,8 @@ class GameState {
 
   // Curving Coastline function: returns true if (x, y) is in the ocean
   isOceanWater(x, y) {
-    // Smooth natural curving crescent coastline along the southern edge
-    const coastThreshold = 44 + Math.sin((x / 59) * Math.PI) * 5.5;
+    // Smooth natural curving coastline along the southern edge
+    const coastThreshold = 48 + Math.sin(x * 0.14) * 4.5 + Math.cos(x * 0.08) * 1.5;
     return y >= coastThreshold;
   }
 
@@ -144,8 +145,10 @@ class GameState {
         const districtId = this.calculateDistrictId(x, y);
         const district = this.districts.find(d => d.id === districtId);
 
-        // Curving Coastline along bottom edge
-        const isWater = this.isOceanWater(x, y);
+        // Curving Coastline on bottom edge + River through District 3/6
+        const isOcean = this.isOceanWater(x, y);
+        const isRiver = !isOcean && (x > 26 && x < 30 && y > 12 && y < 45);
+        const isWater = isOcean || isRiver;
 
         const baseLandValue = isWater ? 0 : Math.round((2500 + (Math.sin(x * 0.2) + Math.cos(y * 0.2)) * 600) * (district ? district.landValueMod : 1.0));
 
@@ -212,6 +215,32 @@ class GameState {
 
     // 2. Populate Starting Clusters of Pre-Existing Level 1 Buildings around Ports
     this.populateStartingPortClusters();
+
+    // Populate municipal historic town center near District 1/4 (x=18..22, y=20..24)
+    for (let x = 18; x <= 22; x++) {
+      for (let y = 20; y <= 24; y++) {
+        const t = this.grid[x][y];
+        if (t && !t.isWater && !t.groundBuilding && (x + y) % 2 === 0) {
+          const type = (x === 20 && y === 22) ? 'COMMERCIAL' : (x % 2 === 0 ? 'RESIDENTIAL' : 'COMMERCIAL');
+          t.ownerId = 'firm_bot_3';
+          t.zoning = type;
+          t.groundBuilding = {
+            type,
+            level: 1,
+            name: `${type === 'COMMERCIAL' ? 'Historic Market' : 'Old City Townhouse'} L1`,
+            constructedTick: 0,
+            health: 100,
+            taxAbatedUntil: 0,
+            unionBuilt: true,
+            rentIncome: 90,
+            pollution: 0,
+            crime: 0,
+            population: type === 'RESIDENTIAL' ? 140 : 0,
+            workers: type === 'COMMERCIAL' ? 60 : 0
+          };
+        }
+      }
+    }
   }
 
   populateStartingPortClusters() {
@@ -284,9 +313,7 @@ class GameState {
         if (n.x >= 0 && n.x < size && n.y >= 0 && n.y < size) {
           const nt = this.grid[n.x][n.y];
           if (nt && !nt.isWater && (!nt.groundBuilding || nt.groundBuilding.type === 'ROAD')) {
-            if (n.x % 3 === 0 || n.y % 3 === 0) {
-              roadSet.add(`${n.x},${n.y}`);
-            }
+            roadSet.add(`${n.x},${n.y}`);
           }
         }
       }
@@ -294,7 +321,7 @@ class GameState {
 
     // Connect the 3 Maritime Ports via a Scenic Coastal Boulevard along the curved coastline
     for (let x = 12; x <= 48; x++) {
-      const coastThresh = 44 + Math.sin((x / 59) * Math.PI) * 5.5;
+      const coastThresh = 48 + Math.sin(x * 0.14) * 4.5 + Math.cos(x * 0.08) * 1.5;
       const roadY = Math.floor(coastThresh) - 1;
       const t = this.grid[x] && this.grid[x][roadY];
       if (t && !t.isWater && (!t.groundBuilding || t.groundBuilding.type === 'ROAD')) {
@@ -677,6 +704,216 @@ class GameState {
 
   markFirmDirty(firmId) {
     this.dirtyFirms.add(firmId);
+  }
+
+  // Verify whether firm owns sufficient contiguous land for multi-tile building upgrades
+  // Level 1: 1x1 tile, Level 2: 2x2 contiguous block (4 tiles), Level 3: 3x3 contiguous block (9 tiles)
+  verifyContiguousLand(originX, originY, targetLevel, firmId) {
+    if (targetLevel <= 1) {
+      return { valid: true, requiredSize: 1, missingTiles: [], footprint: [{ x: originX, y: originY }] };
+    }
+
+    const size = targetLevel === 2 ? 2 : 3;
+    const candidates = [];
+
+    // Generate all candidate square footprints of size x size that contain (originX, originY)
+    for (let ox = 0; ox < size; ox++) {
+      for (let oy = 0; oy < size; oy++) {
+        const startX = originX - ox;
+        const startY = originY - oy;
+
+        // Check boundary limits
+        if (startX < 0 || startY < 0 || startX + size > this.gridSize || startY + size > this.gridSize) {
+          continue;
+        }
+
+        const tiles = [];
+        const missing = [];
+        let hasWater = false;
+
+        for (let dx = 0; dx < size; dx++) {
+          for (let dy = 0; dy < size; dy++) {
+            const tx = startX + dx;
+            const ty = startY + dy;
+            const t = this.grid[tx] && this.grid[tx][ty];
+
+            if (!t || t.isWater) {
+              hasWater = true;
+              break;
+            }
+
+            tiles.push({ x: tx, y: ty, ownerId: t.ownerId });
+
+            if (t.ownerId !== firmId) {
+              const ownerFirm = t.ownerId ? this.firms.get(t.ownerId) : null;
+              missing.push({
+                x: tx,
+                y: ty,
+                ownerId: t.ownerId,
+                ownerName: ownerFirm ? ownerFirm.name : (t.ownerId === 'npc_mayor' ? 'City of Metropolia' : 'Unclaimed Municipal Parcel'),
+                landValue: Math.max(3000, t.landValue || t.basePrice || 5000),
+                perimeterForSale: !!t.perimeterForSale,
+                isOwnedByOther: !!(t.ownerId && t.ownerId !== firmId)
+              });
+            }
+          }
+          if (hasWater) break;
+        }
+
+        if (!hasWater) {
+          candidates.push({
+            startX,
+            startY,
+            size,
+            tiles,
+            missing,
+            missingCount: missing.length
+          });
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      return {
+        valid: false,
+        requiredSize: size,
+        missingTiles: [],
+        footprint: [],
+        error: 'Cannot expand over water or outside city grid borders.'
+      };
+    }
+
+    // Sort by fewest missing tiles to give player the easiest path to land assembly
+    candidates.sort((a, b) => a.missingCount - b.missingCount);
+    const best = candidates[0];
+
+    return {
+      valid: best.missingCount === 0,
+      requiredSize: size,
+      missingTiles: best.missing,
+      footprint: best.tiles,
+      startX: best.startX,
+      startY: best.startY
+    };
+  }
+
+  // Create an active land acquisition negotiation bid
+  createLandBid(bidData) {
+    const bidId = `bid_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const bid = {
+      id: bidId,
+      tileX: bidData.tileX,
+      tileY: bidData.tileY,
+      fromFirmId: bidData.fromFirmId,
+      toFirmId: bidData.toFirmId,
+      offerType: bidData.offerType || 'CASH', // 'CASH', 'STOCK', 'JOINT_VENTURE'
+      cashAmount: Number(bidData.cashAmount) || 0,
+      stockShares: Number(bidData.stockShares) || 0,
+      equityPercent: Number(bidData.equityPercent) || 0,
+      status: 'PENDING', // 'PENDING', 'ACCEPTED', 'COUNTERED', 'REJECTED'
+      createdTick: this.tick,
+      counterHistory: []
+    };
+
+    this.activeLandBids.set(bidId, bid);
+    return bid;
+  }
+
+  // Respond to an active land bid offer (Accept, Counterbid, Reject)
+  respondLandBid(bidId, action, counterData = {}) {
+    const bid = this.activeLandBids.get(bidId);
+    if (!bid) return { success: false, error: 'Bid not found' };
+
+    if (action === 'ACCEPT') {
+      const tradeResult = this.executeLandTrade(bid);
+      if (!tradeResult.success) return tradeResult;
+
+      bid.status = 'ACCEPTED';
+      return { success: true, bid, tradeResult, status: 'ACCEPTED' };
+    } else if (action === 'COUNTER') {
+      bid.status = 'COUNTERED';
+      bid.counterHistory.push({
+        counterTick: this.tick,
+        counterCash: counterData.counterCash || bid.cashAmount,
+        counterShares: counterData.counterShares || bid.stockShares,
+        counterEquity: counterData.counterEquity || bid.equityPercent,
+        message: counterData.message || 'Counterbid proposed'
+      });
+
+      if (counterData.counterCash) bid.cashAmount = Number(counterData.counterCash);
+      if (counterData.counterShares) bid.stockShares = Number(counterData.counterShares);
+      if (counterData.counterEquity) bid.equityPercent = Number(counterData.counterEquity);
+
+      return { success: true, bid, status: 'COUNTERED' };
+    } else {
+      bid.status = 'REJECTED';
+      return { success: true, bid, status: 'REJECTED' };
+    }
+  }
+
+  // Execute ownership transfer and financial settlement for an accepted land deal
+  executeLandTrade(bid) {
+    const tile = this.grid[bid.tileX] && this.grid[bid.tileX][bid.tileY];
+    if (!tile) return { success: false, error: 'Tile not found' };
+
+    const fromFirm = this.firms.get(bid.fromFirmId);
+    const toFirm = this.firms.get(bid.toFirmId);
+
+    if (!fromFirm || !toFirm) return { success: false, error: 'Firm not found' };
+
+    // 1. CASH SETTLEMENT
+    if (bid.offerType === 'CASH') {
+      if (fromFirm.cash < bid.cashAmount) {
+        return { success: false, error: `Bidder has insufficient cash ($${fromFirm.cash.toLocaleString()} < $${bid.cashAmount.toLocaleString()})` };
+      }
+      fromFirm.cash -= bid.cashAmount;
+      toFirm.cash += bid.cashAmount;
+    }
+
+    // 2. STOCK EXCHANGE (Land-for-Stock Trade)
+    else if (bid.offerType === 'STOCK') {
+      if (!toFirm.shareHoldings) toFirm.shareHoldings = {};
+      toFirm.shareHoldings[fromFirm.id] = (toFirm.shareHoldings[fromFirm.id] || 0) + bid.stockShares;
+      this.addNews(
+        `📈 LAND-FOR-STOCK SWAP: ${toFirm.name} traded parcel (${bid.tileX}, ${bid.tileY}) for ${bid.stockShares.toLocaleString()} shares of ${fromFirm.name}!`,
+        'success',
+        { tileX: bid.tileX, tileY: bid.tileY }
+      );
+    }
+
+    // 3. JOINT-VENTURE PARTIAL OWNERSHIP
+    else if (bid.offerType === 'JOINT_VENTURE') {
+      tile.jointVenture = {
+        partnerFirmId: toFirm.id,
+        partnerName: toFirm.name,
+        equityPercent: bid.equityPercent
+      };
+      this.addNews(
+        `🤝 JOINT VENTURE ESTABLISHED: ${fromFirm.name} and ${toFirm.name} formed development partnership on parcel (${bid.tileX}, ${bid.tileY}) (${bid.equityPercent}% equity yield).`,
+        'success',
+        { tileX: bid.tileX, tileY: bid.tileY }
+      );
+    }
+
+    // Transfer primary tile ownership to acquiring firm
+    tile.ownerId = fromFirm.id;
+    fromFirm.totalLand = (fromFirm.totalLand || 0) + 1;
+    if (toFirm.totalLand > 0) toFirm.totalLand -= 1;
+
+    // Update road network, trading triggers, and dirty state
+    this.updateRoadNetwork();
+    this.checkAndActivateTrading(fromFirm.id);
+    this.markTileDirty(bid.tileX, bid.tileY);
+    this.markFirmDirty(fromFirm.id);
+    this.markFirmDirty(toFirm.id);
+
+    return {
+      success: true,
+      tileX: bid.tileX,
+      tileY: bid.tileY,
+      newOwnerId: fromFirm.id,
+      offerType: bid.offerType
+    };
   }
 }
 

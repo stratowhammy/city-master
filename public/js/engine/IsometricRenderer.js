@@ -208,7 +208,7 @@ class IsometricRenderer {
           if (isVisible) {
             const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
             const ownerColor = firm ? firm.color : '#3b82f6';
-            this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, b, ownerColor);
+            this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, b, ownerColor, tile.x, tile.y);
 
             // Informative badge above buildings when zoomed in
             if (this.camera.zoom >= 0.70) {

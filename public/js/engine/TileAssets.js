@@ -5,9 +5,52 @@
 class TileAssets {
   constructor() {
     this.cache = new Map();
+    this.images = new Map();
     this.TILE_WIDTH = 64;
     this.TILE_HEIGHT = 32;
+
+    // Sprite cutouts catalog from the /bldg folder
+    this.buildingSprites = {
+      RESIDENTIAL_L1: [
+        'middleClassHouse1.png', 'middleClassHouse2.png', 'middleClassHouse3.png', 'middleClassHouse4.png',
+        'middleClassHouse5.png', 'middleClassHouse6.png', 'middleClassHouse7.png', 'middleClassHouse8.png',
+        'middleClassHouse9.png', 'middleClassHouse10.png', 'middleClassHouse11.png', 'middleClassHouse12.png',
+        'middleClassHouse13.png', 'middleClassHouse14.png', 'middleClassHouse15.png', 'middleClassHouse16.png'
+      ],
+      RESIDENTIAL_L2: [
+        'upperMiddleClassHouse1.png', 'upperMiddleClassHouse2.png', 'upperMiddleClassHouse3.png', 'upperMiddleClassHouse4.png',
+        'upperMiddleClassHouse5.png', 'upperMiddleClassHouse6.png', 'upperMiddleClassHouse7.png', 'upperMiddleClassHouse8.png',
+        'upperMiddleClassHouse9.png', 'upperMiddleClassHouse10.png', 'upperMiddleClassHouse11.png', 'upperMiddleClassHouse12.png',
+        'upperMiddleClassHouse13.png', 'upperMiddleClassHouse14.png', 'upperMiddleClassHouse15.png'
+      ],
+      RESIDENTIAL_L3: [
+        'upperClassHousing1.png.png', 'upperClassHousing2.png', 'upperClassHousing3.png', 'upperClassHousing4.png',
+        'upperClassHousing5.png', 'upperClassHousing6.png', 'upperClassHousing7.png', 'upperClassHousing8.png',
+        'upperClassHousing9.png', 'upperClassHousing10.png', 'upperClassHousing11.png', 'upperClassHousing12.png'
+      ],
+      COMMERCIAL_L1: ['mediumBrickBuiling.png'],
+      COMMERCIAL_L2: ['mediumBrickBuiling.png'],
+      COMMERCIAL_L3: ['Mall.png'],
+      INDUSTRIAL_L1: ['mediumFactory.png'],
+      INDUSTRIAL_L2: ['mediumFactory.png'],
+      INDUSTRIAL_L3: ['mediumFactory.png']
+    };
+
+    this.preloadBuildingSprites();
     this.initBaseSprites();
+  }
+
+  preloadBuildingSprites() {
+    if (typeof window === 'undefined' || typeof Image === 'undefined') return;
+    const allFiles = new Set();
+    Object.values(this.buildingSprites).forEach(list => list.forEach(f => allFiles.add(f)));
+    allFiles.forEach(file => {
+      const img = new Image();
+      img.src = `/bldg/${file}`;
+      img.onload = () => {
+        this.images.set(file, img);
+      };
+    });
   }
 
   initBaseSprites() {
@@ -389,8 +432,8 @@ class TileAssets {
     ctx.restore();
   }
 
-  // Draw 32-Bit Retro Ground Building (Levels 1 to 3: Residential, Commercial, Industrial)
-  drawGroundBuilding(ctx, screenX, screenY, building, ownerColor = '#3b82f6') {
+  // Draw Ground Building using authentic /bldg sprite cutouts
+  drawGroundBuilding(ctx, screenX, screenY, building, ownerColor = '#3b82f6', gridX = 0, gridY = 0) {
     const type = building.type;
     if (type === 'ROAD') {
       this.drawRoadTile(ctx, screenX, screenY, building.level || 1);
@@ -405,10 +448,74 @@ class TileAssets {
       return;
     }
 
+    const level = Math.min(3, Math.max(1, building.level || 1));
+    const spriteCategoryKey = `${type}_L${level}`;
+    const spriteList = this.buildingSprites[spriteCategoryKey] || this.buildingSprites[`${type}_L1`];
+
+    if (spriteList && spriteList.length > 0) {
+      // Deterministically select sprite variant based on tile position
+      const spriteIdx = Math.abs(Math.round(gridX * 7 + gridY * 13 + level * 3)) % spriteList.length;
+      const filename = spriteList[spriteIdx];
+      const img = this.images.get(filename);
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        // Compute scaled width & height preserving authentic sprite aspect ratio
+        let scale = 1.10;
+        let yOffset = 6;
+
+        if (type === 'RESIDENTIAL') {
+          if (level === 1) { scale = 1.05; yOffset = 6; }
+          else if (level === 2) { scale = 1.18; yOffset = 7; }
+          else { scale = 1.30; yOffset = 8; }
+        } else if (type === 'COMMERCIAL') {
+          if (level === 1) { scale = 1.15; yOffset = 6; }
+          else if (level === 2) { scale = 1.22; yOffset = 7; }
+          else { scale = 1.40; yOffset = 8; }
+        } else if (type === 'INDUSTRIAL') {
+          scale = 1.25;
+          yOffset = 6;
+        }
+
+        const drawWidth = this.TILE_WIDTH * scale;
+        const drawHeight = (img.naturalHeight / img.naturalWidth) * drawWidth;
+        const drawX = screenX - (drawWidth / 2);
+        const drawY = screenY - drawHeight + yOffset;
+
+        ctx.save();
+        // Crisp pixel rendering without blurring
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+        // Owner Color Ribbon Accent on building foundation
+        ctx.fillStyle = ownerColor;
+        ctx.fillRect(screenX - 8, screenY - 2, 16, 3);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(screenX - 8, screenY - 2, 16, 3);
+
+        // Strike Indicator
+        if (building.isUnderStrike) {
+          ctx.fillStyle = '#dc2626';
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText('⚠️ STRIKE', screenX - 22, drawY - 4);
+        }
+
+        // Tax Abatement Badge
+        if (building.taxAbatedUntil > 0) {
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.arc(screenX + 16, drawY + 8, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+        return;
+      }
+    }
+
+    // Procedural 32-Bit Fallback while sprites load
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
-    const level = building.level || 1;
-
     ctx.save();
     ctx.translate(screenX - w / 2, screenY - h / 2);
 
@@ -420,188 +527,43 @@ class TileAssets {
     let wallRightColor = '#64748b';
     let roofColor = '#e2e8f0';
     let windowColor = '#fef08a';
-    let trimColor = '#cbd5e1';
 
     if (type === 'RESIDENTIAL') {
-      if (level === 1) {
-        // Red Clay Shingle Cottage
-        roofColor = '#dc2626';
-        wallLeftColor = '#cbd5e1';
-        wallRightColor = '#94a3b8';
-        trimColor = '#78350f';
-      } else if (level === 2) {
-        // Victorian Brick Townhouse
-        roofColor = '#0284c7';
-        wallLeftColor = '#b91c1c';
-        wallRightColor = '#7f1d1d';
-        trimColor = '#fef08a';
-      } else {
-        // Art-Deco Emerald High-Rise
-        roofColor = '#059669';
-        wallLeftColor = '#047857';
-        wallRightColor = '#064e3b';
-        trimColor = '#a7f3d0';
-      }
+      roofColor = level === 1 ? '#dc2626' : (level === 2 ? '#0284c7' : '#059669');
+      wallLeftColor = level === 1 ? '#cbd5e1' : (level === 2 ? '#b91c1c' : '#047857');
+      wallRightColor = level === 1 ? '#94a3b8' : (level === 2 ? '#7f1d1d' : '#064e3b');
     } else if (type === 'COMMERCIAL') {
-      if (level === 1) {
-        // Neighborhood Bodega / Store with Awning
-        roofColor = '#2563eb';
-        wallLeftColor = '#38bdf8';
-        wallRightColor = '#0284c7';
-        windowColor = '#e0f2fe';
-      } else if (level === 2) {
-        // Mid-Rise Corporate Glass Plaza
-        roofColor = '#1d4ed8';
-        wallLeftColor = '#0369a1';
-        wallRightColor = '#0c4a6e';
-        windowColor = '#67e8f9';
-      } else {
-        // Financial Skyscraper Tower
-        roofColor = '#1e1b4b';
-        wallLeftColor = '#312e81';
-        wallRightColor = '#1e1b4b';
-        windowColor = '#a5f3fc';
-      }
+      roofColor = level === 1 ? '#2563eb' : (level === 2 ? '#1d4ed8' : '#1e1b4b');
+      wallLeftColor = '#38bdf8';
+      wallRightColor = '#0284c7';
+      windowColor = '#67e8f9';
     } else if (type === 'INDUSTRIAL') {
-      // Brick Foundry & Metal Warehouse
       roofColor = '#b45309';
       wallLeftColor = '#78350f';
       wallRightColor = '#451a03';
       windowColor = '#f59e0b';
-      trimColor = '#ea580c';
-    } else if (type === 'CIVIC' || type === 'PARK') {
-      roofColor = '#10b981';
-      wallLeftColor = '#059669';
-      wallRightColor = '#047857';
-    } else if (type === 'RUINS') {
-      roofColor = '#450a0a';
-      wallLeftColor = '#292524';
-      wallRightColor = '#1c1917';
     }
 
-    // 1. Left Wall (Beveled 32-bit light facet)
+    // 1. Left Wall
     ctx.beginPath();
-    ctx.moveTo(0, hh);
-    ctx.lineTo(hw, h);
-    ctx.lineTo(hw, h - bHeight);
-    ctx.lineTo(0, hh - bHeight);
+    ctx.moveTo(0, hh); ctx.lineTo(hw, h); ctx.lineTo(hw, h - bHeight); ctx.lineTo(0, hh - bHeight);
     ctx.closePath();
-    ctx.fillStyle = wallLeftColor;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.fillStyle = wallLeftColor; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
 
-    // 2. Right Wall (Darker shade facet)
+    // 2. Right Wall
     ctx.beginPath();
-    ctx.moveTo(hw, h);
-    ctx.lineTo(w, hh);
-    ctx.lineTo(w, hh - bHeight);
-    ctx.lineTo(hw, h - bHeight);
+    ctx.moveTo(hw, h); ctx.lineTo(w, hh); ctx.lineTo(w, hh - bHeight); ctx.lineTo(hw, h - bHeight);
     ctx.closePath();
-    ctx.fillStyle = wallRightColor;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.fillStyle = wallRightColor; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
 
-    // 3. Roof Top (Highlight facet)
+    // 3. Roof Top
     ctx.beginPath();
-    ctx.moveTo(hw, 0 - bHeight);
-    ctx.lineTo(w, hh - bHeight);
-    ctx.lineTo(hw, h - bHeight);
-    ctx.lineTo(0, hh - bHeight);
+    ctx.moveTo(hw, 0 - bHeight); ctx.lineTo(w, hh - bHeight); ctx.lineTo(hw, h - bHeight); ctx.lineTo(0, hh - bHeight);
     ctx.closePath();
-    ctx.fillStyle = roofColor;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 4. 32-Bit Architectural Details & Windows
-    if (type !== 'RUINS' && level > 0) {
-      ctx.fillStyle = windowColor;
-      for (let f = 1; f <= level; f++) {
-        const floorY = h - (f * 16);
-        // Left wall windows
-        ctx.fillRect(hw - 20, floorY - 6, 5, 5);
-        ctx.fillRect(hw - 10, floorY - 3, 5, 5);
-        // Right wall windows
-        ctx.fillRect(hw + 5, floorY - 3, 5, 5);
-        ctx.fillRect(hw + 15, floorY - 6, 5, 5);
-
-        // Window frames
-        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-        ctx.strokeRect(hw - 20, floorY - 6, 5, 5);
-        ctx.strokeRect(hw - 10, floorY - 3, 5, 5);
-        ctx.strokeRect(hw + 5, floorY - 3, 5, 5);
-        ctx.strokeRect(hw + 15, floorY - 6, 5, 5);
-      }
-
-      // Level 1 Commercial: Striped Storefront Awning
-      if (type === 'COMMERCIAL' && level === 1) {
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(hw - 18, h - 10, 16, 4);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(hw - 14, h - 10, 4, 4);
-        ctx.fillRect(hw - 6, h - 10, 4, 4);
-      }
-
-      // Residential Level 1: Red Chimney with gentle smoke
-      if (type === 'RESIDENTIAL' && level === 1) {
-        ctx.fillStyle = '#7f1d1d';
-        ctx.fillRect(hw - 12, -bHeight - 6, 4, 8);
-        ctx.fillStyle = 'rgba(241, 245, 249, 0.6)';
-        ctx.fillRect(hw - 11, -bHeight - 10, 2, 3);
-      }
-
-      // High-Rise Rooftop Water Tower & Antenna
-      if (level >= 3) {
-        ctx.fillStyle = '#78350f';
-        ctx.fillRect(hw - 8, -bHeight - 8, 8, 8); // Water tank
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(hw + 4, -bHeight - 14, 2, 14); // Radio Mast
-        ctx.fillStyle = '#ef4444'; // Red flashing beacon
-        ctx.fillRect(hw + 3, -bHeight - 16, 4, 2);
-      }
-    }
-
-    // Owner Skyline Badge on Cornice
-    ctx.fillStyle = ownerColor;
-    ctx.fillRect(hw - 6, hh - bHeight - 4, 12, 4);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(hw - 6, hh - bHeight - 4, 12, 4);
-
-    // Industrial Smokestack with animated billowing pixel smoke
-    if (type === 'INDUSTRIAL') {
-      ctx.fillStyle = '#44403c';
-      ctx.fillRect(hw - 12, -bHeight - 14, 8, 14);
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(hw - 12, -bHeight - 14, 8, 2); // Red hazard band
-
-      // Animated Smoke Puffs
-      const smokeOffset = (Date.now() * 0.003) % 8;
-      ctx.fillStyle = 'rgba(214, 211, 209, 0.7)';
-      ctx.fillRect(hw - 10, -bHeight - 18 - smokeOffset, 6, 4);
-      ctx.fillStyle = 'rgba(168, 162, 158, 0.5)';
-      ctx.fillRect(hw - 8, -bHeight - 24 - smokeOffset * 1.5, 8, 6);
-    }
-
-    // Strike Indicator
-    if (building.isUnderStrike) {
-      ctx.fillStyle = '#dc2626';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('⚠️ STRIKE', hw - 22, -bHeight - 6);
-    }
-
-    // Tax Abatement Badge
-    if (building.taxAbatedUntil > 0) {
-      ctx.fillStyle = '#10b981';
-      ctx.beginPath();
-      ctx.arc(w - 6, hh - bHeight, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.fillStyle = roofColor; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
 
     ctx.restore();
   }

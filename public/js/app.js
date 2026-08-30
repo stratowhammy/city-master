@@ -18,9 +18,9 @@ window.addEventListener('DOMContentLoaded', () => {
   window.renderer = renderer;
   window.tutorial = tutorial;
 
-  // Center camera directly on the middle of the city grid
-  renderer.camera.x = 0;
-  renderer.camera.y = -480;
+  // Center camera directly over the 3 maritime ports and curved coastline
+  renderer.camera.x = 576;
+  renderer.camera.y = -1200;
   renderer.camera.zoom = 0.85;
 
   // 60 FPS Rendering Loop (Chromebook Optimized)

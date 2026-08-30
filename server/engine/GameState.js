@@ -83,24 +83,24 @@ class GameState {
       isNPC: true
     }));
 
-    // 3 Distinct Maritime Ports Definitions
+    // 3 Distinct Maritime Ports Definitions along the curved coastline
     this.maritimePorts = [
       {
         id: 'port_north',
         name: '⚓ North Port (Container Freight Terminal)',
         x: 12,
-        y: 44,
+        y: 46,
         type: 'CONTAINER_TERMINAL',
-        pierTiles: [{ x: 12, y: 45 }, { x: 12, y: 46 }, { x: 13, y: 46 }],
+        pierTiles: [{ x: 12, y: 47 }, { x: 12, y: 48 }, { x: 13, y: 47 }],
         economicBonus: { industrial: 1.25, tradeVolume: 450 }
       },
       {
         id: 'port_central',
         name: '⚓ Central Harbor (Commercial Ferry & Deep-Water Pier)',
         x: 30,
-        y: 45,
+        y: 48,
         type: 'COMMERCIAL_HARBOR',
-        pierTiles: [{ x: 30, y: 46 }, { x: 30, y: 47 }, { x: 29, y: 46 }],
+        pierTiles: [{ x: 30, y: 49 }, { x: 30, y: 50 }, { x: 29, y: 49 }],
         economicBonus: { commercial: 1.30, tourism: 500 }
       },
       {
@@ -131,8 +131,8 @@ class GameState {
 
   // Curving Coastline function: returns true if (x, y) is in the ocean
   isOceanWater(x, y) {
-    // Smooth curving coastline along the southern edge (y >= 48 + sin(x * 0.14) * 4.5)
-    const coastThreshold = 48 + Math.sin(x * 0.14) * 4.5 + Math.cos(x * 0.08) * 1.5;
+    // Smooth natural curving crescent coastline along the southern edge
+    const coastThreshold = 44 + Math.sin((x / 59) * Math.PI) * 5.5;
     return y >= coastThreshold;
   }
 
@@ -144,10 +144,8 @@ class GameState {
         const districtId = this.calculateDistrictId(x, y);
         const district = this.districts.find(d => d.id === districtId);
 
-        // Curving Coastline on bottom edge + River through District 3/6
-        const isOcean = this.isOceanWater(x, y);
-        const isRiver = !isOcean && (x > 26 && x < 30 && y > 12 && y < 45);
-        const isWater = isOcean || isRiver;
+        // Curving Coastline along bottom edge
+        const isWater = this.isOceanWater(x, y);
 
         const baseLandValue = isWater ? 0 : Math.round((2500 + (Math.sin(x * 0.2) + Math.cos(y * 0.2)) * 600) * (district ? district.landValueMod : 1.0));
 
@@ -253,32 +251,6 @@ class GameState {
         }
       });
     }
-
-    // Also populate a central municipal historic town center near District 1/4 (x=16..22, y=20..25)
-    for (let x = 18; x <= 22; x++) {
-      for (let y = 20; y <= 24; y++) {
-        const t = this.grid[x][y];
-        if (t && !t.isWater && !t.groundBuilding && (x + y) % 2 === 0) {
-          const type = (x === 20 && y === 22) ? 'COMMERCIAL' : (x % 2 === 0 ? 'RESIDENTIAL' : 'COMMERCIAL');
-          t.ownerId = 'firm_bot_3';
-          t.zoning = type;
-          t.groundBuilding = {
-            type,
-            level: 1,
-            name: `${type === 'COMMERCIAL' ? 'Historic Market' : 'Old City Townhouse'} L1`,
-            constructedTick: 0,
-            health: 100,
-            taxAbatedUntil: 0,
-            unionBuilt: true,
-            rentIncome: 90,
-            pollution: 0,
-            crime: 0,
-            population: type === 'RESIDENTIAL' ? 140 : 0,
-            workers: type === 'COMMERCIAL' ? 60 : 0
-          };
-        }
-      }
-    }
   }
 
   // Update Road Network: Connects all buildings, extends 3 tiles outward, and upgrades road densities
@@ -302,7 +274,7 @@ class GameState {
     }
 
     // Step 2: Establish street grid connecting developed parcels
-    // Add roads adjacent to every developed building
+    // Add roads adjacent to every developed building along street grid lines
     for (const d of developedTiles) {
       const neighbors = [
         { x: d.x + 1, y: d.y }, { x: d.x - 1, y: d.y },
@@ -312,39 +284,32 @@ class GameState {
         if (n.x >= 0 && n.x < size && n.y >= 0 && n.y < size) {
           const nt = this.grid[n.x][n.y];
           if (nt && !nt.isWater && (!nt.groundBuilding || nt.groundBuilding.type === 'ROAD')) {
-            roadSet.add(`${n.x},${n.y}`);
+            if (n.x % 3 === 0 || n.y % 3 === 0) {
+              roadSet.add(`${n.x},${n.y}`);
+            }
           }
         }
       }
     }
 
-    // Connect Ports to Central Arterial Spine (Avenue corridors)
-    for (const port of this.maritimePorts) {
-      for (let y = port.y - 1; y >= 20; y--) {
-        const t = this.grid[port.x][y];
-        if (t && !t.isWater && (!t.groundBuilding || t.groundBuilding.type === 'ROAD')) {
-          roadSet.add(`${port.x},${y}`);
-        }
+    // Connect the 3 Maritime Ports via a Scenic Coastal Boulevard along the curved coastline
+    for (let x = 12; x <= 48; x++) {
+      const coastThresh = 44 + Math.sin((x / 59) * Math.PI) * 5.5;
+      const roadY = Math.floor(coastThresh) - 1;
+      const t = this.grid[x] && this.grid[x][roadY];
+      if (t && !t.isWater && (!t.groundBuilding || t.groundBuilding.type === 'ROAD')) {
+        roadSet.add(`${x},${roadY}`);
       }
     }
-    // East-West connecting cross-avenues at y=22, y=32, y=42
-    [22, 32, 42].forEach(crossY => {
-      for (let x = 8; x <= 52; x++) {
-        const t = this.grid[x] && this.grid[x][crossY];
-        if (t && !t.isWater && (!t.groundBuilding || t.groundBuilding.type === 'ROAD')) {
-          roadSet.add(`${x},${crossY}`);
-        }
-      }
-    });
 
-    // Step 3: Outward Road Expansion: Generate up to 3 tiles beyond outermost developed buildings
+    // Step 3: Outward Road Expansion: Generate straight streets up to 3 tiles beyond outermost developed buildings
     const expansionQueue = [];
     for (const key of roadSet) {
       const [rx, ry] = key.split(',').map(Number);
       expansionQueue.push({ x: rx, y: ry, dist: 0 });
     }
 
-    // Breadth-first expansion up to 3 tiles outward
+    // Breadth-first expansion up to 3 tiles outward along straight grid lines
     const visitedRoads = new Set(roadSet);
     while (expansionQueue.length > 0) {
       const cur = expansionQueue.shift();
@@ -360,8 +325,8 @@ class GameState {
           const key = `${n.x},${n.y}`;
           const nt = this.grid[n.x][n.y];
           if (nt && !nt.isWater && !nt.ownerId && !visitedRoads.has(key)) {
-            // Keep straight road grid lines (aligned with even/odd streets)
-            if (n.x % 3 === 0 || n.y % 3 === 0 || n.y === 42 || n.y === 32 || n.y === 22) {
+            // Keep straight road grid lines
+            if (n.x % 3 === 0 || n.y % 3 === 0) {
               visitedRoads.add(key);
               roadSet.add(key);
               expansionQueue.push({ x: n.x, y: n.y, dist: cur.dist + 1 });

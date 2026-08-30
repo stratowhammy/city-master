@@ -161,22 +161,12 @@ class IsometricRenderer {
 
         const screenPos = this.gridToScreen(x, y, 0);
 
-        // A. 32-Bit Retro Base Ground Terrain & Water
-        let terrainKey = 'ground_grass';
-        if (tile.isWater) terrainKey = 'ground_water';
-        else if (tile.zoning === 'COMMERCIAL' || tile.zoning === 'INDUSTRIAL') terrainKey = 'ground_concrete';
-        else if (tile.roadLevel > 0) terrainKey = 'ground_road';
-
-        const terrainSprite = this.assets.cache.get(terrainKey);
-        if (terrainSprite) {
-          ctx.drawImage(terrainSprite, screenPos.x - this.TILE_WIDTH / 2, screenPos.y);
-        } else {
-          this.assets.draw32BitIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#2e7d32', '#1b5e20', '#388e3c', '#4caf50');
-        }
+        // A. SimCity 2000 Base Ground Terrain & Water
+        this.assets.drawTerrain(ctx, screenPos.x, screenPos.y, tile, x, y);
 
         // Shoreline water-edge seam
         if (tile.isCoastline) {
-          ctx.strokeStyle = '#bae6fd';
+          ctx.strokeStyle = '#5490ff';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(screenPos.x, screenPos.y + this.TILE_HEIGHT);
@@ -190,7 +180,7 @@ class IsometricRenderer {
         // C. Layer Overlays (Pollution, Land Value, For Sale, Zones, Districts)
         this.renderTileOverlay(ctx, tile, screenPos, localPlayerFirmId, gameState);
 
-        // D. 32-Bit Retro Ground Buildings & Roads (Levels 1 to 4) & Ports
+        // D. SimCity 2000 Ground Buildings & Roads (Levels 1 to 4) & Ports
         if (tile.groundBuilding) {
           const b = tile.groundBuilding;
           let isVisible = true;
@@ -208,7 +198,7 @@ class IsometricRenderer {
           if (isVisible) {
             const firm = gameState.firms instanceof Map ? gameState.firms.get(tile.ownerId) : null;
             const ownerColor = firm ? firm.color : '#3b82f6';
-            this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, b, ownerColor, tile.x, tile.y);
+            this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y, b, ownerColor, tile.x, tile.y);
 
             // Informative badge above buildings when zoomed in
             if (this.camera.zoom >= 0.70) {

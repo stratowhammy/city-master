@@ -1,6 +1,6 @@
 // public/js/engine/TileAssets.js
-// Authentic 32-Bit Retro Pixel-Art Sprite & Canvas Texture Generator for 2:1 Dimetric Projection
-// Features rich dithering, pixel-shaded buildings, animated smoke & water ripples, and crisp retro palettes.
+// Authentic SimCity 2000 Isometric Sprite & Graphics Engine for 2:1 Dimetric Projection
+// Utilizes authentic SC2000 sprite sheets for Terrain, Residential, Commercial, Industrial, Ports & Civics.
 
 class TileAssets {
   constructor() {
@@ -9,253 +9,258 @@ class TileAssets {
     this.TILE_WIDTH = 64;
     this.TILE_HEIGHT = 32;
 
-    // Sprite cutouts catalog from the /bldg folder
-    this.buildingSprites = {
-      RESIDENTIAL_L1: [
-        'middleClassHouse1.png', 'middleClassHouse2.png', 'middleClassHouse3.png', 'middleClassHouse4.png',
-        'middleClassHouse5.png', 'middleClassHouse6.png', 'middleClassHouse7.png', 'middleClassHouse8.png',
-        'middleClassHouse9.png', 'middleClassHouse10.png', 'middleClassHouse11.png', 'middleClassHouse12.png',
-        'middleClassHouse13.png', 'middleClassHouse14.png', 'middleClassHouse15.png', 'middleClassHouse16.png'
-      ],
-      RESIDENTIAL_L2: [
-        'upperMiddleClassHouse1.png', 'upperMiddleClassHouse2.png', 'upperMiddleClassHouse3.png', 'upperMiddleClassHouse4.png',
-        'upperMiddleClassHouse5.png', 'upperMiddleClassHouse6.png', 'upperMiddleClassHouse7.png', 'upperMiddleClassHouse8.png',
-        'upperMiddleClassHouse9.png', 'upperMiddleClassHouse10.png', 'upperMiddleClassHouse11.png', 'upperMiddleClassHouse12.png',
-        'upperMiddleClassHouse13.png', 'upperMiddleClassHouse14.png', 'upperMiddleClassHouse15.png'
-      ],
-      RESIDENTIAL_L3: [
-        'upperClassHousing1.png.png', 'upperClassHousing2.png', 'upperClassHousing3.png', 'upperClassHousing4.png',
-        'upperClassHousing5.png', 'upperClassHousing6.png', 'upperClassHousing7.png', 'upperClassHousing8.png',
-        'upperClassHousing9.png', 'upperClassHousing10.png', 'upperClassHousing11.png', 'upperClassHousing12.png'
-      ],
-      COMMERCIAL_L1: ['mediumBrickBuiling.png'],
-      COMMERCIAL_L2: ['mediumBrickBuiling.png'],
-      COMMERCIAL_L3: ['Mall.png'],
-      INDUSTRIAL_L1: ['mediumFactory.png'],
-      INDUSTRIAL_L2: ['mediumFactory.png'],
-      INDUSTRIAL_L3: ['mediumFactory.png']
+    // Sprite Sheet File Paths from /sc2000
+    this.sheetPaths = {
+      TERRAIN: '/sc2000/95015.png',
+      RESIDENTIAL: '/sc2000/95013.png',
+      COMMERCIAL: '/sc2000/95007.png',
+      INDUSTRIAL: '/sc2000/95009.png',
+      PORT: '/sc2000/95011.png',
+      CIVIC: '/sc2000/95014.png',
+      SPECIAL: '/sc2000/64181.png'
     };
 
-    this.preloadBuildingSprites();
+    // Authentic SimCity 2000 Sprite Definitions (Coordinates on respective sheets)
+    this.sprites = {
+      TERRAIN_GRASS: [
+        { sheet: 'TERRAIN', sx: 352, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 392, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 432, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 472, sy: 15, sw: 32, sh: 17 }
+      ],
+      TERRAIN_WATER: [
+        { sheet: 'TERRAIN', sx: 536, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 576, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 616, sy: 15, sw: 32, sh: 17 },
+        { sheet: 'TERRAIN', sx: 656, sy: 15, sw: 32, sh: 17 }
+      ],
+      TERRAIN_CONCRETE: [
+        { sheet: 'TERRAIN', sx: 48, sy: 11, sw: 32, sh: 29 },
+        { sheet: 'TERRAIN', sx: 88, sy: 11, sw: 32, sh: 29 }
+      ],
+      RESIDENTIAL_L1: [
+        { sheet: 'RESIDENTIAL', sx: 304, sy: 22, sw: 32, sh: 18 },
+        { sheet: 'RESIDENTIAL', sx: 344, sy: 22, sw: 32, sh: 18 },
+        { sheet: 'RESIDENTIAL', sx: 384, sy: 22, sw: 32, sh: 18 },
+        { sheet: 'RESIDENTIAL', sx: 304, sy: 55, sw: 32, sh: 17 },
+        { sheet: 'RESIDENTIAL', sx: 344, sy: 55, sw: 32, sh: 17 },
+        { sheet: 'RESIDENTIAL', sx: 384, sy: 55, sw: 32, sh: 17 },
+        { sheet: 'RESIDENTIAL', sx: 304, sy: 87, sw: 32, sh: 17 },
+        { sheet: 'RESIDENTIAL', sx: 344, sy: 87, sw: 32, sh: 17 },
+        { sheet: 'RESIDENTIAL', sx: 384, sy: 116, sw: 32, sh: 20 },
+        { sheet: 'RESIDENTIAL', sx: 304, sy: 117, sw: 32, sh: 19 },
+        { sheet: 'RESIDENTIAL', sx: 344, sy: 117, sw: 32, sh: 19 },
+        { sheet: 'RESIDENTIAL', sx: 304, sy: 147, sw: 32, sh: 21 }
+      ],
+      RESIDENTIAL_L2: [
+        { sheet: 'RESIDENTIAL', sx: 8, sy: 46, sw: 64, sh: 34 },
+        { sheet: 'RESIDENTIAL', sx: 80, sy: 41, sw: 64, sh: 39 },
+        { sheet: 'RESIDENTIAL', sx: 152, sy: 44, sw: 64, sh: 36 },
+        { sheet: 'RESIDENTIAL', sx: 224, sy: 36, sw: 64, sh: 44 },
+        { sheet: 'RESIDENTIAL', sx: 8, sy: 115, sw: 64, sh: 53 },
+        { sheet: 'RESIDENTIAL', sx: 80, sy: 112, sw: 64, sh: 56 },
+        { sheet: 'RESIDENTIAL', sx: 152, sy: 90, sw: 64, sh: 78 },
+        { sheet: 'RESIDENTIAL', sx: 224, sy: 91, sw: 64, sh: 77 }
+      ],
+      RESIDENTIAL_L3: [
+        { sheet: 'RESIDENTIAL', sx: 8, sy: 195, sw: 96, sh: 77 },
+        { sheet: 'RESIDENTIAL', sx: 112, sy: 184, sw: 96, sh: 88 },
+        { sheet: 'RESIDENTIAL', sx: 216, sy: 214, sw: 96, sh: 58 },
+        { sheet: 'RESIDENTIAL', sx: 320, sy: 176, sw: 96, sh: 96 }
+      ],
+      COMMERCIAL_L1: [
+        { sheet: 'COMMERCIAL', sx: 8, sy: 105, sw: 32, sh: 23 },
+        { sheet: 'COMMERCIAL', sx: 48, sy: 101, sw: 32, sh: 27 },
+        { sheet: 'COMMERCIAL', sx: 88, sy: 108, sw: 32, sh: 20 },
+        { sheet: 'COMMERCIAL', sx: 128, sy: 110, sw: 32, sh: 18 },
+        { sheet: 'COMMERCIAL', sx: 168, sy: 96, sw: 32, sh: 32 },
+        { sheet: 'COMMERCIAL', sx: 208, sy: 85, sw: 32, sh: 43 },
+        { sheet: 'COMMERCIAL', sx: 248, sy: 103, sw: 32, sh: 25 },
+        { sheet: 'COMMERCIAL', sx: 288, sy: 94, sw: 32, sh: 34 }
+      ],
+      COMMERCIAL_L2: [
+        { sheet: 'COMMERCIAL', sx: 8, sy: 138, sw: 64, sh: 46 },
+        { sheet: 'COMMERCIAL', sx: 72, sy: 147, sw: 64, sh: 37 },
+        { sheet: 'COMMERCIAL', sx: 144, sy: 147, sw: 64, sh: 37 },
+        { sheet: 'COMMERCIAL', sx: 224, sy: 142, sw: 64, sh: 42 },
+        { sheet: 'COMMERCIAL', sx: 296, sy: 139, sw: 64, sh: 46 },
+        { sheet: 'COMMERCIAL', sx: 8, sy: 227, sw: 64, sh: 53 },
+        { sheet: 'COMMERCIAL', sx: 76, sy: 205, sw: 64, sh: 75 },
+        { sheet: 'COMMERCIAL', sx: 144, sy: 213, sw: 64, sh: 67 },
+        { sheet: 'COMMERCIAL', sx: 216, sy: 205, sw: 64, sh: 75 },
+        { sheet: 'COMMERCIAL', sx: 288, sy: 197, sw: 64, sh: 83 }
+      ],
+      COMMERCIAL_L3: [
+        { sheet: 'COMMERCIAL', sx: 424, sy: 67, sw: 96, sh: 61 },
+        { sheet: 'COMMERCIAL', sx: 528, sy: 37, sw: 96, sh: 91 },
+        { sheet: 'COMMERCIAL', sx: 632, sy: 63, sw: 96, sh: 65 },
+        { sheet: 'COMMERCIAL', sx: 736, sy: 11, sw: 96, sh: 117 },
+        { sheet: 'COMMERCIAL', sx: 424, sy: 149, sw: 96, sh: 115 },
+        { sheet: 'COMMERCIAL', sx: 528, sy: 181, sw: 96, sh: 83 },
+        { sheet: 'COMMERCIAL', sx: 632, sy: 157, sw: 96, sh: 107 },
+        { sheet: 'COMMERCIAL', sx: 736, sy: 141, sw: 96, sh: 123 }
+      ],
+      INDUSTRIAL_L1: [
+        { sheet: 'INDUSTRIAL', sx: 8, sy: 13, sw: 64, sh: 43 },
+        { sheet: 'INDUSTRIAL', sx: 80, sy: 13, sw: 64, sh: 43 },
+        { sheet: 'INDUSTRIAL', sx: 664, sy: 113, sw: 64, sh: 39 },
+        { sheet: 'INDUSTRIAL', sx: 736, sy: 113, sw: 64, sh: 39 }
+      ],
+      INDUSTRIAL_L2: [
+        { sheet: 'INDUSTRIAL', sx: 8, sy: 70, sw: 64, sh: 42 },
+        { sheet: 'INDUSTRIAL', sx: 80, sy: 70, sw: 64, sh: 42 },
+        { sheet: 'INDUSTRIAL', sx: 8, sy: 185, sw: 64, sh: 45 },
+        { sheet: 'INDUSTRIAL', sx: 8, sy: 300, sw: 96, sh: 60 }
+      ],
+      INDUSTRIAL_L3: [
+        { sheet: 'INDUSTRIAL', sx: 664, sy: 165, sw: 96, sh: 51 },
+        { sheet: 'INDUSTRIAL', sx: 768, sy: 165, sw: 96, sh: 51 }
+      ],
+      PORT: [
+        { sheet: 'PORT', sx: 8, sy: 8, sw: 32, sh: 40 },
+        { sheet: 'PORT', sx: 192, sy: 232, sw: 64, sh: 40 },
+        { sheet: 'PORT', sx: 16, sy: 216, sw: 64, sh: 56 }
+      ],
+      PIER: [
+        { sheet: 'PORT', sx: 48, sy: 27, sw: 32, sh: 21 }
+      ],
+      CIVIC: [
+        { sheet: 'CIVIC', sx: 8, sy: 224, sw: 64, sh: 48 },
+        { sheet: 'CIVIC', sx: 72, sy: 224, sw: 64, sh: 48 },
+        { sheet: 'CIVIC', sx: 136, sy: 224, sw: 64, sh: 48 },
+        { sheet: 'CIVIC', sx: 200, sy: 224, sw: 64, sh: 48 },
+        { sheet: 'CIVIC', sx: 192, sy: 384, sw: 64, sh: 48 }
+      ]
+    };
+
+    this.preloadSheets();
     this.initBaseSprites();
   }
 
-  preloadBuildingSprites() {
+  preloadSheets() {
     if (typeof window === 'undefined' || typeof Image === 'undefined') return;
-    const allFiles = new Set();
-    Object.values(this.buildingSprites).forEach(list => list.forEach(f => allFiles.add(f)));
-    allFiles.forEach(file => {
+    Object.entries(this.sheetPaths).forEach(([key, url]) => {
       const img = new Image();
-      img.src = `/bldg/${file}`;
+      img.src = url;
       img.onload = () => {
-        this.images.set(file, img);
+        this.images.set(key, img);
       };
     });
   }
 
   initBaseSprites() {
-    // 1. 32-Bit Retro Grass Ground Terrain (Dithered with pixel blades & soil specks)
+    // 1. SimCity 2000 Style Procedural Fallback Terrain
     this.createTileCanvas('ground_grass', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#2e7d32', '#1b5e20', '#388e3c', '#4caf50');
-
-      // Pixel grass blades & dithering
-      ctx.fillStyle = '#66bb6a';
+      this.drawSC2000Diamond(ctx, w, h, '#43833b', '#2d5e27', '#4d9944', '#70bf67');
+      // Dithered pixels
+      ctx.fillStyle = '#70bf67';
       ctx.fillRect(w / 2 - 8, h / 2 - 4, 2, 2);
       ctx.fillRect(w / 2 + 10, h / 2 - 2, 2, 2);
       ctx.fillRect(w / 2 - 14, h / 2 + 2, 2, 2);
-      ctx.fillRect(w / 2 + 4, h / 2 + 4, 2, 2);
-      ctx.fillRect(w / 2 - 2, h / 2 - 8, 2, 2);
-
-      // Darker blades
-      ctx.fillStyle = '#1b5e20';
-      ctx.fillRect(w / 2 - 6, h / 2 - 2, 2, 2);
-      ctx.fillRect(w / 2 + 12, h / 2 + 2, 2, 2);
-      ctx.fillRect(w / 2 - 12, h / 2 + 6, 2, 2);
-
-      // Subtle wildflower / stone pixel
-      ctx.fillStyle = '#fff59d';
-      ctx.fillRect(w / 2 + 6, h / 2 - 5, 2, 2);
-      ctx.fillStyle = '#ff8a80';
-      ctx.fillRect(w / 2 - 16, h / 2 - 1, 2, 2);
+      ctx.fillStyle = '#2d5e27';
+      ctx.fillRect(w / 2 - 4, h / 2 + 5, 2, 2);
+      ctx.fillRect(w / 2 + 8, h / 2 + 4, 2, 2);
     });
 
-    // 2. 32-Bit Retro Deep Ocean Water (Layered wave currents & specular glints)
+    // 2. SimCity 2000 Deep Blue Water
     this.createTileCanvas('ground_water', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#0284c7', '#0369a1', '#0ea5e9', '#38bdf8');
-
-      // Dark trench shadow
-      ctx.fillStyle = '#0c4a6e';
-      ctx.fillRect(w / 2 - 16, h / 2 + 2, 8, 3);
-      ctx.fillRect(w / 2 + 4, h / 2 - 4, 10, 3);
-
-      // Light wave crest highlights
-      ctx.fillStyle = '#bae6fd';
-      ctx.fillRect(w / 2 - 18, h / 2 - 6, 6, 2);
-      ctx.fillRect(w / 2 - 6, h / 2 - 1, 8, 2);
-      ctx.fillRect(w / 2 + 8, h / 2 + 3, 6, 2);
-      ctx.fillRect(w / 2 - 10, h / 2 + 6, 5, 2);
-
-      // Specular white foam sparkle
+      this.drawSC2000Diamond(ctx, w, h, '#0000d8', '#0000a0', '#0038ff', '#5490ff');
+      // Animated water shimmer
+      ctx.fillStyle = '#99ccff';
+      ctx.fillRect(w / 2 - 12, h / 2 - 3, 6, 2);
+      ctx.fillRect(w / 2 + 4, h / 2 + 3, 6, 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(w / 2 - 16, h / 2 - 6, 2, 2);
-      ctx.fillRect(w / 2 - 4, h / 2 - 1, 2, 2);
-      ctx.fillRect(w / 2 + 10, h / 2 + 3, 2, 2);
+      ctx.fillRect(w / 2 - 10, h / 2 - 3, 2, 2);
     });
 
-    // 3. 32-Bit Retro Concrete Urban Foundation (Pavement slabs & expansion joints)
+    // 3. SimCity 2000 Concrete Urban Foundation
     this.createTileCanvas('ground_concrete', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#475569', '#334155', '#64748b', '#94a3b8');
-
-      // Expansion joints
-      ctx.strokeStyle = '#1e293b';
+      this.drawSC2000Diamond(ctx, w, h, '#808080', '#5a5a5a', '#9e9e9e', '#b8b8b8');
+      ctx.strokeStyle = '#404040';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
       ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
       ctx.stroke();
-
-      // Pavement speckles
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(w / 2 - 10, h / 2 - 3, 2, 2);
-      ctx.fillRect(w / 2 + 8, h / 2 + 2, 2, 2);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(w / 2 - 4, h / 2 + 5, 2, 2);
-      ctx.fillRect(w / 2 + 14, h / 2 - 4, 2, 2);
     });
 
-    // 4. 32-Bit Road Level 1: Local 2-Lane Street (Charcoal asphalt, dashed yellow line, curb stones)
+    // 4. SimCity 2000 Road Level 1 (Local 2-Lane Street)
     this.createTileCanvas('road_lvl1', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#334155', '#1e293b', '#475569', '#64748b');
-
-      // Curb highlight
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(w / 2 - 22, h / 2 - 10, 44, 20);
-
+      this.drawSC2000Diamond(ctx, w, h, '#303030', '#1c1c1c', '#404040', '#6e6e6e');
       // Yellow dashed center divider
       ctx.fillStyle = '#facc15';
       ctx.fillRect(w / 2 - 2, h / 2 - 5, 4, 2);
       ctx.fillRect(w / 2 + 6, h / 2 - 1, 4, 2);
       ctx.fillRect(w / 2 - 10, h / 2 + 1, 4, 2);
-
-      // Asphalt texture
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(w / 2 - 8, h / 2 - 4, 2, 2);
-      ctx.fillRect(w / 2 + 12, h / 2 + 4, 2, 2);
     });
 
-    // 5. 32-Bit Road Level 2: Multi-Lane Avenue (Double yellow center, white dashes, crosswalk zebra stripes)
+    // 5. SimCity 2000 Road Level 2 (Multi-Lane Avenue)
     this.createTileCanvas('road_lvl2', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#1e293b', '#0f172a', '#334155', '#475569');
-
-      // Double solid center line
+      this.drawSC2000Diamond(ctx, w, h, '#242424', '#141414', '#383838', '#585858');
       ctx.fillStyle = '#f59e0b';
       ctx.fillRect(w / 2 - 2, h / 2 - 6, 2, 12);
       ctx.fillRect(w / 2 + 1, h / 2 - 6, 2, 12);
-
-      // White lane dividers
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(w / 2 - 14, h / 2 - 3, 4, 2);
-      ctx.fillRect(w / 2 + 10, h / 2 - 3, 4, 2);
-      ctx.fillRect(w / 2 - 14, h / 2 + 3, 4, 2);
-      ctx.fillRect(w / 2 + 10, h / 2 + 3, 4, 2);
-
-      // White Crosswalk Zebra Stripes
+      // White zebra crosswalks
       ctx.fillStyle = '#ffffff';
-      for (let i = -16; i <= 16; i += 8) {
-        ctx.fillRect(w / 2 + i, h / 2 - 10, 4, 2);
-        ctx.fillRect(w / 2 + i, h / 2 + 8, 4, 2);
+      for (let i = -14; i <= 14; i += 7) {
+        ctx.fillRect(w / 2 + i, h / 2 - 9, 3, 2);
+        ctx.fillRect(w / 2 + i, h / 2 + 7, 3, 2);
       }
-
-      // Concrete Sidewalk Curbs
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(w / 2 - 26, h / 2 + 8, 52, 2);
     });
 
-    // 6. 32-Bit Road Level 3: High-Capacity Boulevard (Green landscaped median, streetlights, painted arrows)
+    // 6. SimCity 2000 Road Level 3 (Boulevard with Landscaped Median)
     this.createTileCanvas('road_lvl3', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#0f172a', '#020617', '#1e293b', '#38bdf8');
-
-      // Landscaped Green Center Island
-      ctx.fillStyle = '#15803d';
+      this.drawSC2000Diamond(ctx, w, h, '#181818', '#0c0c0c', '#2c2c2c', '#484848');
+      // Green Center Median
+      ctx.fillStyle = '#2d5e27';
       ctx.beginPath();
       ctx.ellipse(w / 2, h / 2, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#22c55e';
+      ctx.strokeStyle = '#70bf67';
       ctx.lineWidth = 1;
       ctx.stroke();
-
-      // Retro Pixel Street Trees on Median
-      ctx.fillStyle = '#16a34a';
+      // Pixel trees
+      ctx.fillStyle = '#43833b';
       ctx.beginPath();
-      ctx.arc(w / 2 - 6, h / 2 - 2, 3, 0, Math.PI * 2);
-      ctx.arc(w / 2 + 6, h / 2 + 2, 3, 0, Math.PI * 2);
+      ctx.arc(w / 2 - 5, h / 2 - 2, 3, 0, Math.PI * 2);
+      ctx.arc(w / 2 + 5, h / 2 + 2, 3, 0, Math.PI * 2);
       ctx.fill();
-
-      // Retro Vintage Lamp Posts on Median with glowing halo
-      ctx.fillStyle = '#475569';
-      ctx.fillRect(w / 2 - 1, h / 2 - 14, 2, 12);
-      // Glowing Lantern
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(w / 2 - 2, h / 2 - 16, 4, 3);
-      ctx.fillStyle = 'rgba(254, 240, 138, 0.4)';
-      ctx.beginPath();
-      ctx.arc(w / 2, h / 2 - 15, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // White lane arrows
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(w / 2 - 18, h / 2 - 3, 6, 2);
-      ctx.fillRect(w / 2 + 12, h / 2 - 3, 6, 2);
     });
 
-    // 7. 32-Bit Road Level 4: Heavy Arterial Expressway (Concrete barriers, transit lanes, steel gantry)
+    // 7. SimCity 2000 Road Level 4 (Highway / Expressway)
     this.createTileCanvas('road_lvl4', (ctx, w, h) => {
-      this.draw32BitIsoDiamond(ctx, w, h, '#020617', '#000000', '#0f172a', '#c084fc');
-
-      // Cyan illuminated transit speed lanes
+      this.drawSC2000Diamond(ctx, w, h, '#101010', '#000000', '#202020', '#a855f7');
+      // Cyan transit lane
       ctx.fillStyle = '#06b6d4';
-      ctx.fillRect(w / 2 - 20, h / 2 - 6, 3, 12);
-      ctx.fillRect(w / 2 + 17, h / 2 - 6, 3, 12);
-
-      // Heavy Concrete Jersey Barrier in Center
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(w / 2 - 2, h / 2 - 8, 4, 16);
-      ctx.fillStyle = '#64748b';
-      ctx.fillRect(w / 2 - 1, h / 2 - 8, 2, 16);
-
-      // Overhead Steel Highway Gantry Signage
-      ctx.fillStyle = '#475569';
-      ctx.fillRect(w / 2 - 22, h / 2 - 20, 4, 18);
-      ctx.fillRect(w / 2 + 18, h / 2 - 20, 4, 18);
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(w / 2 - 22, h / 2 - 22, 44, 4);
-
-      // Digital Green/Blue Overhead Route Displays
-      ctx.fillStyle = '#0284c7';
-      ctx.fillRect(w / 2 - 18, h / 2 - 21, 16, 2);
-      ctx.fillStyle = '#16a34a';
-      ctx.fillRect(w / 2 + 2, h / 2 - 21, 16, 2);
+      ctx.fillRect(w / 2 - 18, h / 2 - 5, 3, 10);
+      ctx.fillRect(w / 2 + 15, h / 2 - 5, 3, 10);
+      // Concrete divider
+      ctx.fillStyle = '#9e9e9e';
+      ctx.fillRect(w / 2 - 2, h / 2 - 7, 4, 14);
+      // Overhead gantry
+      ctx.fillStyle = '#4b5563';
+      ctx.fillRect(w / 2 - 20, h / 2 - 18, 40, 3);
+      ctx.fillRect(w / 2 - 20, h / 2 - 18, 3, 16);
+      ctx.fillRect(w / 2 + 17, h / 2 - 18, 3, 16);
     });
   }
 
-  createTileCanvas(key, drawFn, width = this.TILE_WIDTH, height = this.TILE_HEIGHT + 40) {
+  createTileCanvas(key, drawFn, width = this.TILE_WIDTH, height = this.TILE_HEIGHT) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    drawFn(ctx, width, this.TILE_HEIGHT);
+    drawFn(ctx, width, height);
     this.cache.set(key, canvas);
     return canvas;
   }
 
-  // 32-Bit Beveled Isometric Diamond with Highlights and Depth Facets
-  draw32BitIsoDiamond(ctx, w, h, fillTop, fillLeft, fillRight, strokeHighlight) {
+  // Authentic SimCity 2000 Beveled Isometric Diamond
+  drawSC2000Diamond(ctx, w, h, fillTop, fillLeft, fillRight, strokeHighlight) {
     const hw = w / 2;
     const hh = h / 2;
 
-    // Top Face
     ctx.beginPath();
     ctx.moveTo(hw, 0);
     ctx.lineTo(w - 1, hh);
@@ -265,26 +270,65 @@ class TileAssets {
     ctx.fillStyle = fillTop;
     ctx.fill();
 
-    // Northwest Specular Highlight (Light Source from top-left)
+    // Top-left highlight
     ctx.strokeStyle = strokeHighlight || 'rgba(255,255,255,0.4)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, hh);
-    ctx.lineTo(hw, 0);
-    ctx.lineTo(w - 1, hh);
+    ctx.moveTo(0, hh); ctx.lineTo(hw, 0); ctx.lineTo(w - 1, hh);
     ctx.stroke();
 
-    // Southeast Depth Shadow
+    // Bottom-right shadow
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(w - 1, hh);
-    ctx.lineTo(hw, h - 1);
-    ctx.lineTo(0, hh);
+    ctx.moveTo(w - 1, hh); ctx.lineTo(hw, h - 1); ctx.lineTo(0, hh);
     ctx.stroke();
   }
 
-  // Draw Road Tile based on Level (1 to 4)
+  // Draw SimCity 2000 Terrain Tile (Grass, Water, Concrete)
+  drawTerrain(ctx, screenX, screenY, tile, gridX = 0, gridY = 0) {
+    const terrainImg = this.images.get('TERRAIN');
+    let spriteList = null;
+
+    if (tile.isWater) {
+      spriteList = this.sprites.TERRAIN_WATER;
+    } else if (tile.zoning === 'COMMERCIAL' || tile.zoning === 'INDUSTRIAL') {
+      spriteList = this.sprites.TERRAIN_CONCRETE;
+    } else {
+      spriteList = this.sprites.TERRAIN_GRASS;
+    }
+
+    if (terrainImg && terrainImg.complete && spriteList && spriteList.length > 0) {
+      const idx = Math.abs(gridX * 7 + gridY * 13) % spriteList.length;
+      const sp = spriteList[idx];
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      // 2.0x scale matches SC2000 32x16 tile to our 64x32 tile diamond
+      ctx.drawImage(
+        terrainImg,
+        sp.sx, sp.sy, sp.sw, sp.sh,
+        screenX - this.TILE_WIDTH / 2, screenY,
+        this.TILE_WIDTH, this.TILE_HEIGHT + 2
+      );
+      ctx.restore();
+      return;
+    }
+
+    // Procedural fallback
+    let key = 'ground_grass';
+    if (tile.isWater) key = 'ground_water';
+    else if (tile.zoning === 'COMMERCIAL' || tile.zoning === 'INDUSTRIAL') key = 'ground_concrete';
+
+    const sprite = this.cache.get(key);
+    if (sprite) {
+      ctx.drawImage(sprite, screenX - this.TILE_WIDTH / 2, screenY);
+    } else {
+      this.drawSC2000Diamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#43833b', '#2d5e27', '#4d9944', '#70bf67');
+    }
+  }
+
+  // Draw SimCity 2000 Road Tile
   drawRoadTile(ctx, screenX, screenY, roadLevel = 1) {
     let key = 'road_lvl1';
     if (roadLevel === 2) key = 'road_lvl2';
@@ -295,203 +339,53 @@ class TileAssets {
     if (sprite) {
       ctx.drawImage(sprite, screenX - this.TILE_WIDTH / 2, screenY);
     } else {
-      this.draw32BitIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#334155', '#1e293b', '#475569', '#64748b');
+      this.drawSC2000Diamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#303030', '#1c1c1c', '#404040', '#6e6e6e');
     }
   }
 
-  // Draw 32-Bit Maritime Port Hub (Terminal, Stacked Cargo Containers, Gantry Crane)
-  drawMaritimePort(ctx, screenX, screenY, portBuilding) {
-    const w = this.TILE_WIDTH;
-    const h = this.TILE_HEIGHT;
-    const hw = w / 2;
-    const hh = h / 2;
-
-    ctx.save();
-    ctx.translate(screenX - hw, screenY - hh);
-
-    // Port concrete apron foundation
-    this.draw32BitIsoDiamond(ctx, w, h, '#475569', '#334155', '#64748b', '#94a3b8');
-
-    // 1. Port Logistics Terminal Brick Building (Left)
-    ctx.fillStyle = '#0284c7';
-    ctx.fillRect(hw - 22, hh - 20, 18, 16);
-    // Brick texture & windows
-    ctx.fillStyle = '#bae6fd';
-    ctx.fillRect(hw - 20, hh - 18, 4, 4);
-    ctx.fillRect(hw - 12, hh - 18, 4, 4);
-    ctx.fillStyle = '#0369a1';
-    ctx.fillRect(hw - 22, hh - 22, 18, 3); // Cornice
-
-    // 2. 32-Bit Stacked Cargo Shipping Containers with Corrugated Ribs
-    // Blue Container
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(hw + 2, hh - 12, 16, 8);
-    ctx.strokeStyle = '#1d4ed8';
-    ctx.strokeRect(hw + 2, hh - 12, 16, 8);
-    ctx.fillStyle = '#93c5fd';
-    ctx.fillRect(hw + 5, hh - 10, 2, 4);
-    ctx.fillRect(hw + 10, hh - 10, 2, 4);
-
-    // Orange Container (Stacked on top)
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(hw + 4, hh - 20, 14, 7);
-    ctx.strokeStyle = '#c2410c';
-    ctx.strokeRect(hw + 4, hh - 20, 14, 7);
-    ctx.fillStyle = '#fdba74';
-    ctx.fillRect(hw + 7, hh - 18, 2, 3);
-
-    // Emerald Green Container
-    ctx.fillStyle = '#059669';
-    ctx.fillRect(hw - 6, hh - 8, 12, 6);
-    ctx.strokeStyle = '#047857';
-    ctx.strokeRect(hw - 6, hh - 8, 12, 6);
-
-    // 3. 32-Bit Heavy Gantry Cargo Crane (Lattice Trusswork)
-    ctx.strokeStyle = '#dc2626'; // Red Crane Steel
-    ctx.lineWidth = 2.0;
-    ctx.beginPath();
-    ctx.moveTo(hw - 12, hh + 4);
-    ctx.lineTo(hw - 4, hh - 32);
-    ctx.lineTo(hw + 8, hh + 4);
-    ctx.moveTo(hw - 8, hh - 30);
-    ctx.lineTo(hw + 24, hh - 30); // Boom
-    ctx.stroke();
-
-    // Crane Cable & Winch
-    ctx.strokeStyle = '#f8fafc';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(hw + 16, hh - 30);
-    ctx.lineTo(hw + 16, hh - 14);
-    ctx.stroke();
-
-    // Suspended Yellow Cargo Box
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(hw + 12, hh - 14, 8, 6);
-    ctx.strokeStyle = '#ca8a04';
-    ctx.strokeRect(hw + 12, hh - 14, 8, 6);
-
-    ctx.restore();
-  }
-
-  // Draw 32-Bit Pier Dock extending into ocean with moored vessel
-  drawPierDock(ctx, screenX, screenY, pierBuilding) {
-    const w = this.TILE_WIDTH;
-    const h = this.TILE_HEIGHT;
-    const hw = w / 2;
-    const hh = h / 2;
-
-    ctx.save();
-    ctx.translate(screenX - hw, screenY - hh);
-
-    // Wooden/Concrete Pier Planks with Nail Rivets
-    ctx.fillStyle = '#78350f';
-    ctx.beginPath();
-    ctx.moveTo(hw, 4);
-    ctx.lineTo(w - 6, hh);
-    ctx.lineTo(hw, h - 4);
-    ctx.lineTo(6, hh);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#451a03';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Wood plank grooves
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.beginPath();
-    ctx.moveTo(hw - 12, hh - 3); ctx.lineTo(hw + 12, hh - 3);
-    ctx.moveTo(hw - 10, hh + 3); ctx.lineTo(hw + 10, hh + 3);
-    ctx.stroke();
-
-    // Moored Cargo Vessel / Tugboat
-    ctx.fillStyle = '#1e293b'; // Hull
-    ctx.beginPath();
-    ctx.moveTo(hw + 6, hh - 10);
-    ctx.lineTo(hw + 26, hh - 2);
-    ctx.lineTo(hw + 20, hh + 8);
-    ctx.lineTo(hw + 2, hh);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#475569';
-    ctx.stroke();
-
-    // Ship Cabin & Red Funnel with puff
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(hw + 8, hh - 14, 8, 6);
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(hw + 11, hh - 18, 3, 4);
-    ctx.fillStyle = 'rgba(241, 245, 249, 0.7)';
-    ctx.fillRect(hw + 12, hh - 22, 2, 2);
-
-    // Mooring Bollards
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(hw - 8, hh - 4, 3, 4);
-    ctx.fillRect(hw + 6, hh - 4, 3, 4);
-
-    ctx.restore();
-  }
-
-  // Draw Ground Building using authentic /bldg sprite cutouts
+  // Draw Ground Building using authentic SimCity 2000 sprite sheets
   drawGroundBuilding(ctx, screenX, screenY, building, ownerColor = '#3b82f6', gridX = 0, gridY = 0) {
     const type = building.type;
     if (type === 'ROAD') {
       this.drawRoadTile(ctx, screenX, screenY, building.level || 1);
       return;
     }
-    if (type === 'PORT') {
-      this.drawMaritimePort(ctx, screenX, screenY, building);
-      return;
-    }
-    if (type === 'PIER') {
-      this.drawPierDock(ctx, screenX, screenY, building);
-      return;
-    }
 
     const level = Math.min(3, Math.max(1, building.level || 1));
-    const spriteCategoryKey = `${type}_L${level}`;
-    const spriteList = this.buildingSprites[spriteCategoryKey] || this.buildingSprites[`${type}_L1`];
+    let spriteCategoryKey = `${type}_L${level}`;
+    if (type === 'PORT') spriteCategoryKey = 'PORT';
+    else if (type === 'PIER') spriteCategoryKey = 'PIER';
+    else if (type === 'CIVIC' || type === 'PARK') spriteCategoryKey = 'CIVIC';
+
+    const spriteList = this.sprites[spriteCategoryKey] || this.sprites[`${type}_L1`] || this.sprites.RESIDENTIAL_L1;
 
     if (spriteList && spriteList.length > 0) {
-      // Deterministically select sprite variant based on tile position
       const spriteIdx = Math.abs(Math.round(gridX * 7 + gridY * 13 + level * 3)) % spriteList.length;
-      const filename = spriteList[spriteIdx];
-      const img = this.images.get(filename);
+      const sp = spriteList[spriteIdx];
+      const sheetImg = this.images.get(sp.sheet);
 
-      if (img && img.complete && img.naturalWidth > 0) {
-        // Compute scaled width & height preserving authentic sprite aspect ratio
-        let scale = 1.10;
-        let yOffset = 6;
-
-        if (type === 'RESIDENTIAL') {
-          if (level === 1) { scale = 1.05; yOffset = 6; }
-          else if (level === 2) { scale = 1.18; yOffset = 7; }
-          else { scale = 1.30; yOffset = 8; }
-        } else if (type === 'COMMERCIAL') {
-          if (level === 1) { scale = 1.15; yOffset = 6; }
-          else if (level === 2) { scale = 1.22; yOffset = 7; }
-          else { scale = 1.40; yOffset = 8; }
-        } else if (type === 'INDUSTRIAL') {
-          scale = 1.25;
-          yOffset = 6;
-        }
-
-        const drawWidth = this.TILE_WIDTH * scale;
-        const drawHeight = (img.naturalHeight / img.naturalWidth) * drawWidth;
+      if (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0) {
+        // SimCity 2000 2.0x integer scale factor
+        const drawWidth = sp.sw * 2.0;
+        const drawHeight = sp.sh * 2.0;
         const drawX = screenX - (drawWidth / 2);
-        const drawY = screenY - drawHeight + yOffset;
+        // Anchor building base to bottom vertex of ground tile
+        const drawY = (screenY + this.TILE_HEIGHT) - drawHeight;
 
         ctx.save();
-        // Crisp pixel rendering without blurring
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        ctx.drawImage(
+          sheetImg,
+          sp.sx, sp.sy, sp.sw, sp.sh,
+          drawX, drawY, drawWidth, drawHeight
+        );
 
-        // Owner Color Ribbon Accent on building foundation
+        // Corporate Owner Color Accent Ribbon on building foundation
         ctx.fillStyle = ownerColor;
-        ctx.fillRect(screenX - 8, screenY - 2, 16, 3);
+        ctx.fillRect(screenX - 8, screenY + this.TILE_HEIGHT - 4, 16, 3);
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 0.5;
-        ctx.strokeRect(screenX - 8, screenY - 2, 16, 3);
+        ctx.strokeRect(screenX - 8, screenY + this.TILE_HEIGHT - 4, 16, 3);
 
         // Strike Indicator
         if (building.isUnderStrike) {
@@ -513,57 +407,58 @@ class TileAssets {
       }
     }
 
-    // Procedural 32-Bit Fallback while sprites load
+    // Procedural Fallback while sprite sheets are loading
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
     ctx.save();
-    ctx.translate(screenX - w / 2, screenY - h / 2);
+    ctx.translate(screenX - w / 2, screenY);
 
-    const bHeight = level * 20 + 12;
+    const bHeight = level * 18 + 10;
     const hw = w / 2;
     const hh = h / 2;
 
-    let wallLeftColor = '#94a3b8';
-    let wallRightColor = '#64748b';
-    let roofColor = '#e2e8f0';
-    let windowColor = '#fef08a';
+    let wallLeftColor = '#808080';
+    let wallRightColor = '#505050';
+    let roofColor = '#a0a0a0';
 
     if (type === 'RESIDENTIAL') {
-      roofColor = level === 1 ? '#dc2626' : (level === 2 ? '#0284c7' : '#059669');
-      wallLeftColor = level === 1 ? '#cbd5e1' : (level === 2 ? '#b91c1c' : '#047857');
-      wallRightColor = level === 1 ? '#94a3b8' : (level === 2 ? '#7f1d1d' : '#064e3b');
+      roofColor = level === 1 ? '#c0392b' : (level === 2 ? '#2980b9' : '#27ae60');
+      wallLeftColor = '#bdc3c7';
+      wallRightColor = '#7f8c8d';
     } else if (type === 'COMMERCIAL') {
-      roofColor = level === 1 ? '#2563eb' : (level === 2 ? '#1d4ed8' : '#1e1b4b');
-      wallLeftColor = '#38bdf8';
-      wallRightColor = '#0284c7';
-      windowColor = '#67e8f9';
+      roofColor = level === 1 ? '#3498db' : (level === 2 ? '#2c3e50' : '#1a252f');
+      wallLeftColor = '#ecf0f1';
+      wallRightColor = '#95a5a6';
     } else if (type === 'INDUSTRIAL') {
-      roofColor = '#b45309';
-      wallLeftColor = '#78350f';
-      wallRightColor = '#451a03';
-      windowColor = '#f59e0b';
+      roofColor = '#d35400';
+      wallLeftColor = '#7f8c8d';
+      wallRightColor = '#34495e';
+    } else if (type === 'PORT') {
+      roofColor = '#e67e22';
+      wallLeftColor = '#95a5a6';
+      wallRightColor = '#7f8c8d';
     }
 
-    // 1. Left Wall
+    // Left Wall
     ctx.beginPath();
     ctx.moveTo(0, hh); ctx.lineTo(hw, h); ctx.lineTo(hw, h - bHeight); ctx.lineTo(0, hh - bHeight);
     ctx.closePath();
     ctx.fillStyle = wallLeftColor; ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
 
-    // 2. Right Wall
+    // Right Wall
     ctx.beginPath();
     ctx.moveTo(hw, h); ctx.lineTo(w, hh); ctx.lineTo(w, hh - bHeight); ctx.lineTo(hw, h - bHeight);
     ctx.closePath();
     ctx.fillStyle = wallRightColor; ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
 
-    // 3. Roof Top
+    // Roof Top
     ctx.beginPath();
     ctx.moveTo(hw, 0 - bHeight); ctx.lineTo(w, hh - bHeight); ctx.lineTo(hw, h - bHeight); ctx.lineTo(0, hh - bHeight);
     ctx.closePath();
     ctx.fillStyle = roofColor; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
 
     ctx.restore();
   }
@@ -585,10 +480,6 @@ class TileAssets {
     ctx.fillStyle = `rgba(0, 0, 0, ${alpha.toFixed(2)})`;
     ctx.fill();
     ctx.restore();
-  }
-
-  drawFloatingArcology(ctx, screenX, screenY, arcology, ownerColor = '#3b82f6') {
-    // Preserved for future sky city reactivation
   }
 }
 

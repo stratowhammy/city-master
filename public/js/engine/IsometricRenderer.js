@@ -1,6 +1,6 @@
 // public/js/engine/IsometricRenderer.js
-// Strict 2:1 Dimetric Isometric Renderer (64x32) with Viewport Culling for Chromebooks,
-// Curving Coastline with 3 Maritime Ports, Dynamic Road Densities (Levels 1-4), and Neon Land Highlighting.
+// 32-Bit Retro Dimetric Isometric Renderer (64x32) with Organic Black Void Map Expansion
+// Features pitch-black void rendering, adjacent frontier lot unlocking, and 32-bit retro graphics.
 
 class IsometricRenderer {
   constructor(canvas, assets) {
@@ -37,6 +37,7 @@ class IsometricRenderer {
   initCanvasSize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    this.ctx.imageSmoothingEnabled = false;
   }
 
   // Convert Grid (x, y, z) -> Screen Coordinates (Strict 2:1 Dimetric)
@@ -60,12 +61,61 @@ class IsometricRenderer {
     return { x: Math.floor(gx), y: Math.floor(gy) };
   }
 
+  // Organic Frontier Visibility Check:
+  // Tile is visible ONLY IF it is owned/developed OR is an immediate neighboring unpurchased lot
+  isTileVisible(gameState, x, y) {
+    if (!gameState || !gameState.grid || !gameState.grid[x]) return false;
+    const t = gameState.grid[x][y];
+    if (!t) return false;
+
+    // 1. Directly owned or maritime port / pier
+    if (t.ownerId || (t.groundBuilding && (t.groundBuilding.type === 'PORT' || t.groundBuilding.type === 'PIER'))) {
+      return true;
+    }
+
+    // 2. Immediate Neighbor to an already owned/developed parcel (8-neighborhood)
+    const size = gameState.gridSize || 60;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+          const nt = gameState.grid[nx] && gameState.grid[nx][ny];
+          if (nt && (nt.ownerId || (nt.groundBuilding && (nt.groundBuilding.type === 'PORT' || nt.groundBuilding.type === 'PIER')))) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // 3. For water tiles: visible if directly adjacent to any visible port or land
+    if (t.isWater) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+            const nt = gameState.grid[nx] && gameState.grid[nx][ny];
+            if (nt && !nt.isWater && (nt.ownerId || (nt.groundBuilding && nt.groundBuilding.type === 'PORT'))) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    // Beyond the immediate neighboring unpurchased lots: unrevealed black void!
+    return false;
+  }
+
   render(gameState, localPlayerFirmId) {
     const ctx = this.ctx;
     const { width, height } = this.canvas;
 
-    // 1. Clear Screen (Futuristic Deep Night Sky)
-    ctx.fillStyle = '#090d16';
+    // 1. Clear Screen to Pitch Black Retro Void
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
@@ -79,20 +129,18 @@ class IsometricRenderer {
     const halfH = this.TILE_HEIGHT / 2;
 
     // 2. Strict Viewport Bounding Box Culling (Chromebook Performance Optimization)
-    // Compute the 4 corners of visible screen in world space
     const invZoom = 1 / this.camera.zoom;
     const wLeft = (-width / 2) * invZoom - this.camera.x;
     const wRight = (width / 2) * invZoom - this.camera.x;
     const wTop = (-height / 2) * invZoom - this.camera.y;
     const wBottom = (height / 2) * invZoom - this.camera.y;
 
-    // Map 4 screen corners to isometric grid coordinates
     const gTop = { x: (wLeft / halfW + wTop / halfH) / 2, y: (wTop / halfH - wLeft / halfW) / 2 };
     const gRight = { x: (wRight / halfW + wTop / halfH) / 2, y: (wTop / halfH - wRight / halfW) / 2 };
     const gBottom = { x: (wRight / halfW + wBottom / halfH) / 2, y: (wBottom / halfH - wRight / halfW) / 2 };
     const gLeft = { x: (wLeft / halfW + wBottom / halfH) / 2, y: (wBottom / halfH - wLeft / halfW) / 2 };
 
-    const margin = 4; // Safety padding tiles
+    const margin = 4;
     const minSum = Math.max(0, Math.floor(Math.min(gTop.x + gTop.y, gRight.x + gRight.y, gBottom.x + gBottom.y, gLeft.x + gLeft.y) - margin));
     const maxSum = Math.min((gridSize - 1) * 2, Math.ceil(Math.max(gTop.x + gTop.y, gRight.x + gRight.y, gBottom.x + gBottom.y, gLeft.x + gLeft.y) + margin));
 
@@ -102,12 +150,18 @@ class IsometricRenderer {
         const y = sum - x;
         if (x >= gridSize || y >= gridSize || y < 0) continue;
 
+        // ORGANIC BLACK BACKGROUND EXPANSION GATE:
+        // If tile is beyond immediate neighboring unpurchased lots, completely skip rendering!
+        if (!this.isTileVisible(gameState, x, y)) {
+          continue;
+        }
+
         const tile = gameState.grid[x] && gameState.grid[x][y];
         if (!tile) continue;
 
         const screenPos = this.gridToScreen(x, y, 0);
 
-        // A. Base Ground Terrain & Water
+        // A. 32-Bit Retro Base Ground Terrain & Water
         let terrainKey = 'ground_grass';
         if (tile.isWater) terrainKey = 'ground_water';
         else if (tile.zoning === 'COMMERCIAL' || tile.zoning === 'INDUSTRIAL') terrainKey = 'ground_concrete';
@@ -117,12 +171,12 @@ class IsometricRenderer {
         if (terrainSprite) {
           ctx.drawImage(terrainSprite, screenPos.x - this.TILE_WIDTH / 2, screenPos.y);
         } else {
-          this.assets.drawIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#2d6a4f', '#1b4332', '#40916c');
+          this.assets.draw32BitIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#2e7d32', '#1b5e20', '#388e3c', '#4caf50');
         }
 
         // Shoreline water-edge seam
         if (tile.isCoastline) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.strokeStyle = '#bae6fd';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(screenPos.x, screenPos.y + this.TILE_HEIGHT);
@@ -130,13 +184,13 @@ class IsometricRenderer {
           ctx.stroke();
         }
 
-        // B. Ownership Borders & Neon Green Land Highlighting
+        // B. Ownership Borders & Glowing Neon Green Available Land Highlighting
         this.renderOwnershipBorders(ctx, tile, screenPos, localPlayerFirmId, gameState);
 
         // C. Layer Overlays (Pollution, Land Value, For Sale, Zones, Districts)
         this.renderTileOverlay(ctx, tile, screenPos, localPlayerFirmId, gameState);
 
-        // D. Ground Buildings & Roads (Levels 1 to 4) & Ports
+        // D. 32-Bit Retro Ground Buildings & Roads (Levels 1 to 4) & Ports
         if (tile.groundBuilding) {
           const b = tile.groundBuilding;
           let isVisible = true;
@@ -156,14 +210,14 @@ class IsometricRenderer {
             const ownerColor = firm ? firm.color : '#3b82f6';
             this.assets.drawGroundBuilding(ctx, screenPos.x, screenPos.y + this.TILE_HEIGHT / 2, b, ownerColor);
 
-            // Display informative badge above buildings when zoomed in
+            // Informative badge above buildings when zoomed in
             if (this.camera.zoom >= 0.70) {
               if (b.type === 'PORT') {
-                this.drawBuildingBadge(ctx, screenPos.x, screenPos.y - 14, b.name, '#0284c7');
+                this.drawBuildingBadge(ctx, screenPos.x, screenPos.y - 16, b.name, '#0284c7');
               } else if (b.type === 'COMMERCIAL') {
-                if (b.level === 1) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏪 Store (Low Comm)', '#0284c7');
-                else if (b.level === 2) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏢 Office (Med Comm)', '#0369a1');
-                else if (b.level >= 3) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏬 Mall (High Comm)', '#1d4ed8');
+                if (b.level === 1) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏪 Store (L1 Comm)', '#0284c7');
+                else if (b.level === 2) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏢 Office (L2 Comm)', '#0369a1');
+                else if (b.level >= 3) this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏬 Tower (L3 Comm)', '#1d4ed8');
               } else if (b.type === 'INDUSTRIAL') {
                 this.drawBuildingBadge(ctx, screenPos.x, screenPos.y, '🏭 Factory', '#b45309');
               } else if (b.type === 'RESIDENTIAL') {
@@ -177,7 +231,7 @@ class IsometricRenderer {
           }
         }
 
-        // E. Highlight Hovered / Selected Tile
+        // E. Highlight Hovered / Selected Tile (Only on visible revealed frontier tiles)
         if (this.hoveredTile && this.hoveredTile.x === x && this.hoveredTile.y === y) {
           ctx.strokeStyle = '#38bdf8';
           ctx.lineWidth = 3.0;
@@ -276,7 +330,7 @@ class IsometricRenderer {
     ctx.restore();
   }
 
-  // Render distinct borders & Neon Green Available Land
+  // Render distinct 32-bit borders & Neon Green Available Frontier Land
   renderOwnershipBorders(ctx, tile, screenPos, localPlayerFirmId, gameState) {
     ctx.save();
 
@@ -288,23 +342,23 @@ class IsometricRenderer {
         return;
       }
 
+      // ✨ NEON GREEN AVAILABLE ADJACENT FRONTIER LAND HIGHLIGHTING
       if (isBuyLandMode || tile.perimeterForSale) {
-        // ✨ NEON GREEN AVAILABLE LAND HIGHLIGHTING
-        ctx.fillStyle = 'rgba(74, 222, 128, 0.45)'; // Bright Neon Green Fill
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.45)'; // Vibrant Neon Green Fill
         this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
 
         ctx.strokeStyle = '#4ade80'; // Glowing Neon Green Border
         ctx.lineWidth = 2.0;
         this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
 
-        // Price badge on unowned tile
+        // Price badge on available adjacent parcel
         if (this.camera.zoom >= 0.60) {
           const val = tile.landValue || 5000;
           this.drawTileBadge(ctx, screenPos.x, screenPos.y, `$${val.toLocaleString()}`, '#064e3b', '#86efac');
         }
       } else {
-        // Subtle dotted outline
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.20)';
+        // Subtle pixelated frontier border
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.35)';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);
@@ -317,13 +371,12 @@ class IsometricRenderer {
       const isMine = (tile.ownerId === localPlayerFirmId);
 
       if (isBuyLandMode) {
-        // Dim owned land in buy land mode so available land pops out
         ctx.fillStyle = isMine ? 'rgba(56, 189, 248, 0.20)' : 'rgba(15, 23, 42, 0.50)';
         this.fillTileDiamond(ctx, screenPos.x, screenPos.y);
       }
 
       if (isMine) {
-        // Player's own land: Glowing double cyan border
+        // Player's own land: Glowing cyan border
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2.0;
         this.strokeTileDiamond(ctx, screenPos.x, screenPos.y);

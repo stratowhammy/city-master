@@ -415,7 +415,7 @@ class GameState {
       }
     }
 
-    // Step 5: Automatically Zone & Price Any Unowned Tile Adjacent to the Extended Road Network
+    // Step 5: Automatically Zone & Price Any Unowned Tile Directly Adjacent to Already Owned Land or Ports
     for (let x = 0; x < size; x++) {
       for (let y = 0; y < size; y++) {
         const t = this.grid[x][y];
@@ -424,13 +424,15 @@ class GameState {
           continue;
         }
 
-        // Check if adjacent to any road tile
-        const hasRoadNeighbor = [
+        // Check if directly adjacent to an owned lot or maritime port
+        const hasOwnedNeighbor = [
           { x: x + 1, y }, { x: x - 1, y },
-          { x, y: y + 1 }, { x, y: y - 1 }
-        ].some(n => n.x >= 0 && n.x < size && n.y >= 0 && n.y < size && this.grid[n.x][n.y] && this.grid[n.x][n.y].roadLevel > 0);
+          { x, y: y + 1 }, { x, y: y - 1 },
+          { x: x + 1, y: y + 1 }, { x: x - 1, y: y - 1 },
+          { x: x + 1, y: y - 1 }, { x: x - 1, y: y + 1 }
+        ].some(n => n.x >= 0 && n.x < size && n.y >= 0 && n.y < size && this.grid[n.x] && this.grid[n.x][n.y] && (this.grid[n.x][n.y].ownerId || (this.grid[n.x][n.y].groundBuilding && (this.grid[n.x][n.y].groundBuilding.type === 'PORT' || this.grid[n.x][n.y].groundBuilding.type === 'PIER'))));
 
-        if (hasRoadNeighbor) {
+        if (hasOwnedNeighbor) {
           t.perimeterForSale = true;
           // Dynamically price based on proximity to nearest port and district modifier
           const district = this.districts.find(d => d.id === t.districtId);

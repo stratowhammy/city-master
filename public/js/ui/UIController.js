@@ -351,9 +351,13 @@ class UIController {
       const gs = this.network.gameState;
 
       if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
-        this.renderer.hoveredTile = gridPos;
-        if (gs.grid && gs.grid[gridPos.x]) {
-          this.updateTileInspector(gs.grid[gridPos.x][gridPos.y]);
+        if (this.renderer.isTileVisible(gs, gridPos.x, gridPos.y)) {
+          this.renderer.hoveredTile = gridPos;
+          if (gs.grid && gs.grid[gridPos.x]) {
+            this.updateTileInspector(gs.grid[gridPos.x][gridPos.y]);
+          }
+        } else {
+          this.renderer.hoveredTile = null;
         }
       } else {
         this.renderer.hoveredTile = null;
@@ -373,7 +377,9 @@ class UIController {
           const gs = this.network.gameState;
 
           if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
-            this.executeToolAction(gridPos.x, gridPos.y);
+            if (this.renderer.isTileVisible(gs, gridPos.x, gridPos.y)) {
+              this.executeToolAction(gridPos.x, gridPos.y);
+            }
           }
         }
       }
@@ -388,7 +394,9 @@ class UIController {
       const gs = this.network.gameState;
 
       if (gridPos && gs && gridPos.x >= 0 && gridPos.x < (gs.gridSize || 60) && gridPos.y >= 0 && gridPos.y < (gs.gridSize || 60)) {
-        this.executeToolAction(gridPos.x, gridPos.y);
+        if (this.renderer.isTileVisible(gs, gridPos.x, gridPos.y)) {
+          this.executeToolAction(gridPos.x, gridPos.y);
+        }
       }
     });
 
@@ -425,6 +433,20 @@ class UIController {
           this.showToast(msg, 'error');
           SpeechHelper.speakIfAuto(msg);
         } else {
+          // Check adjacency to already owned land
+          const isAdjacentToOwned = [
+            { x: x + 1, y }, { x: x - 1, y },
+            { x, y: y + 1 }, { x, y: y - 1 },
+            { x: x + 1, y: y + 1 }, { x: x - 1, y: y - 1 },
+            { x: x + 1, y: y - 1 }, { x: x - 1, y: y + 1 }
+          ].some(n => n.x >= 0 && n.x < (gs.gridSize || 60) && n.y >= 0 && n.y < (gs.gridSize || 60) && gs.grid[n.x] && gs.grid[n.x][n.y] && (gs.grid[n.x][n.y].ownerId || (gs.grid[n.x][n.y].groundBuilding && (gs.grid[n.x][n.y].groundBuilding.type === 'PORT' || gs.grid[n.x][n.y].groundBuilding.type === 'PIER'))));
+
+          if (!isAdjacentToOwned) {
+            this.showToast('You can only purchase land directly next to already owned lots!', 'error');
+            SpeechHelper.speakIfAuto('You can only purchase land directly next to already owned lots.');
+            return;
+          }
+
           const cost = tile.landValue || 5000;
           if (firm && firm.cash < cost) {
             this.showToast(`Not enough cash! Need $${cost.toLocaleString()} to buy this land.`, 'error');

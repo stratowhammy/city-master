@@ -1,7 +1,6 @@
 // public/js/engine/TileAssets.js
-// Procedural Pixel-Art Sprite & Canvas Texture Generator for 2:1 Dimetric Rendering
-// Strict 2:1 Dimetric Projection (W=64, H=32), Maritime Ports, Dynamic Road Levels 1-4,
-// and zero-overhead cached canvas rendering for low-end hardware & Chromebooks.
+// Authentic 32-Bit Retro Pixel-Art Sprite & Canvas Texture Generator for 2:1 Dimetric Projection
+// Features rich dithering, pixel-shaded buildings, animated smoke & water ripples, and crisp retro palettes.
 
 class TileAssets {
   constructor() {
@@ -12,108 +11,188 @@ class TileAssets {
   }
 
   initBaseSprites() {
-    // 1. Grass Ground Terrain
+    // 1. 32-Bit Retro Grass Ground Terrain (Dithered with pixel blades & soil specks)
     this.createTileCanvas('ground_grass', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#2d6a4f', '#1b4332', '#40916c');
-      ctx.fillStyle = '#52b788';
-      ctx.fillRect(w / 2 - 4, h / 2 - 2, 2, 2);
-      ctx.fillRect(w / 2 + 8, h / 2 + 1, 2, 2);
-      ctx.fillRect(w / 2 - 10, h / 2 + 3, 2, 2);
+      this.draw32BitIsoDiamond(ctx, w, h, '#2e7d32', '#1b5e20', '#388e3c', '#4caf50');
+
+      // Pixel grass blades & dithering
+      ctx.fillStyle = '#66bb6a';
+      ctx.fillRect(w / 2 - 8, h / 2 - 4, 2, 2);
+      ctx.fillRect(w / 2 + 10, h / 2 - 2, 2, 2);
+      ctx.fillRect(w / 2 - 14, h / 2 + 2, 2, 2);
+      ctx.fillRect(w / 2 + 4, h / 2 + 4, 2, 2);
+      ctx.fillRect(w / 2 - 2, h / 2 - 8, 2, 2);
+
+      // Darker blades
+      ctx.fillStyle = '#1b5e20';
+      ctx.fillRect(w / 2 - 6, h / 2 - 2, 2, 2);
+      ctx.fillRect(w / 2 + 12, h / 2 + 2, 2, 2);
+      ctx.fillRect(w / 2 - 12, h / 2 + 6, 2, 2);
+
+      // Subtle wildflower / stone pixel
+      ctx.fillStyle = '#fff59d';
+      ctx.fillRect(w / 2 + 6, h / 2 - 5, 2, 2);
+      ctx.fillStyle = '#ff8a80';
+      ctx.fillRect(w / 2 - 16, h / 2 - 1, 2, 2);
     });
 
-    // 2. Deep Ocean Water with Wave Reflections
+    // 2. 32-Bit Retro Deep Ocean Water (Layered wave currents & specular glints)
     this.createTileCanvas('ground_water', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#0077b6', '#03045e', '#0096c7');
-      // Animated water wave highlights
-      ctx.strokeStyle = 'rgba(202, 240, 248, 0.6)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - 14, h / 2 - 1);
-      ctx.lineTo(w / 2 - 4, h / 2 + 2);
-      ctx.moveTo(w / 2 + 2, h / 2 - 2);
-      ctx.lineTo(w / 2 + 12, h / 2 + 1);
-      ctx.stroke();
+      this.draw32BitIsoDiamond(ctx, w, h, '#0284c7', '#0369a1', '#0ea5e9', '#38bdf8');
+
+      // Dark trench shadow
+      ctx.fillStyle = '#0c4a6e';
+      ctx.fillRect(w / 2 - 16, h / 2 + 2, 8, 3);
+      ctx.fillRect(w / 2 + 4, h / 2 - 4, 10, 3);
+
+      // Light wave crest highlights
+      ctx.fillStyle = '#bae6fd';
+      ctx.fillRect(w / 2 - 18, h / 2 - 6, 6, 2);
+      ctx.fillRect(w / 2 - 6, h / 2 - 1, 8, 2);
+      ctx.fillRect(w / 2 + 8, h / 2 + 3, 6, 2);
+      ctx.fillRect(w / 2 - 10, h / 2 + 6, 5, 2);
+
+      // Specular white foam sparkle
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(w / 2 - 16, h / 2 - 6, 2, 2);
+      ctx.fillRect(w / 2 - 4, h / 2 - 1, 2, 2);
+      ctx.fillRect(w / 2 + 10, h / 2 + 3, 2, 2);
     });
 
-    // 3. Concrete Urban Foundation
+    // 3. 32-Bit Retro Concrete Urban Foundation (Pavement slabs & expansion joints)
     this.createTileCanvas('ground_concrete', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#475569', '#1e293b', '#64748b');
-      ctx.strokeStyle = '#334155';
+      this.draw32BitIsoDiamond(ctx, w, h, '#475569', '#334155', '#64748b', '#94a3b8');
+
+      // Expansion joints
+      ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+      ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
       ctx.stroke();
+
+      // Pavement speckles
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(w / 2 - 10, h / 2 - 3, 2, 2);
+      ctx.fillRect(w / 2 + 8, h / 2 + 2, 2, 2);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(w / 2 - 4, h / 2 + 5, 2, 2);
+      ctx.fillRect(w / 2 + 14, h / 2 - 4, 2, 2);
     });
 
-    // 4. Road Level 1: Local 2-Lane Street (Dashed yellow centerline)
+    // 4. 32-Bit Road Level 1: Local 2-Lane Street (Charcoal asphalt, dashed yellow line, curb stones)
     this.createTileCanvas('road_lvl1', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#334155', '#0f172a', '#64748b');
-      // Yellow center dashes
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(w / 2 - 1, h / 2 - 4, 2, 2);
-      ctx.fillRect(w / 2 + 5, h / 2 - 1, 2, 2);
-      ctx.fillRect(w / 2 - 7, h / 2 + 1, 2, 2);
+      this.draw32BitIsoDiamond(ctx, w, h, '#334155', '#1e293b', '#475569', '#64748b');
+
+      // Curb highlight
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(w / 2 - 22, h / 2 - 10, 44, 20);
+
+      // Yellow dashed center divider
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(w / 2 - 2, h / 2 - 5, 4, 2);
+      ctx.fillRect(w / 2 + 6, h / 2 - 1, 4, 2);
+      ctx.fillRect(w / 2 - 10, h / 2 + 1, 4, 2);
+
+      // Asphalt texture
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(w / 2 - 8, h / 2 - 4, 2, 2);
+      ctx.fillRect(w / 2 + 12, h / 2 + 4, 2, 2);
     });
 
-    // 5. Road Level 2: Multi-Lane Avenue (4 lanes with white lane markers and crosswalk stripes)
+    // 5. 32-Bit Road Level 2: Multi-Lane Avenue (Double yellow center, white dashes, crosswalk zebra stripes)
     this.createTileCanvas('road_lvl2', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#1e293b', '#020617', '#94a3b8');
+      this.draw32BitIsoDiamond(ctx, w, h, '#1e293b', '#0f172a', '#334155', '#475569');
+
       // Double solid center line
       ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(w / 2 - 2, h / 2 - 5, 2, 10);
-      ctx.fillRect(w / 2 + 1, h / 2 - 5, 2, 10);
+      ctx.fillRect(w / 2 - 2, h / 2 - 6, 2, 12);
+      ctx.fillRect(w / 2 + 1, h / 2 - 6, 2, 12);
+
       // White lane dividers
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(w / 2 - 14, h / 2 - 3, 4, 2);
+      ctx.fillRect(w / 2 + 10, h / 2 - 3, 4, 2);
+      ctx.fillRect(w / 2 - 14, h / 2 + 3, 4, 2);
+      ctx.fillRect(w / 2 + 10, h / 2 + 3, 4, 2);
+
+      // White Crosswalk Zebra Stripes
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(w / 2 - 12, h / 2 - 2, 3, 2);
-      ctx.fillRect(w / 2 + 10, h / 2 - 2, 3, 2);
-      // Sidewalk curbs
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(w / 2 - 20, h / 2 + 6, 40, 1.5);
+      for (let i = -16; i <= 16; i += 8) {
+        ctx.fillRect(w / 2 + i, h / 2 - 10, 4, 2);
+        ctx.fillRect(w / 2 + i, h / 2 + 8, 4, 2);
+      }
+
+      // Concrete Sidewalk Curbs
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(w / 2 - 26, h / 2 + 8, 52, 2);
     });
 
-    // 6. Road Level 3: High-Capacity Boulevard (6 lanes, landscaped median, streetlights)
+    // 6. 32-Bit Road Level 3: High-Capacity Boulevard (Green landscaped median, streetlights, painted arrows)
     this.createTileCanvas('road_lvl3', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#0f172a', '#020617', '#38bdf8');
-      // Landscaped Green Center Median
-      ctx.fillStyle = '#10b981';
+      this.draw32BitIsoDiamond(ctx, w, h, '#0f172a', '#020617', '#1e293b', '#38bdf8');
+
+      // Landscaped Green Center Island
+      ctx.fillStyle = '#15803d';
       ctx.beginPath();
-      ctx.ellipse(w / 2, h / 2, 10, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(w / 2, h / 2, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#059669';
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Street lamp posts on median
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(w / 2 - 1, h / 2 - 12, 2, 10);
+      // Retro Pixel Street Trees on Median
+      ctx.fillStyle = '#16a34a';
       ctx.beginPath();
-      ctx.arc(w / 2, h / 2 - 12, 3, 0, Math.PI * 2);
+      ctx.arc(w / 2 - 6, h / 2 - 2, 3, 0, Math.PI * 2);
+      ctx.arc(w / 2 + 6, h / 2 + 2, 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Multi-lane markings
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(w / 2 - 16, h / 2 - 3, 4, 1.5);
-      ctx.fillRect(w / 2 + 12, h / 2 - 3, 4, 1.5);
+      // Retro Vintage Lamp Posts on Median with glowing halo
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(w / 2 - 1, h / 2 - 14, 2, 12);
+      // Glowing Lantern
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(w / 2 - 2, h / 2 - 16, 4, 3);
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.4)';
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2 - 15, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White lane arrows
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(w / 2 - 18, h / 2 - 3, 6, 2);
+      ctx.fillRect(w / 2 + 12, h / 2 - 3, 6, 2);
     });
 
-    // 7. Road Level 4: Heavy Commercial Arterial (Express multi-lane corridor)
+    // 7. 32-Bit Road Level 4: Heavy Arterial Expressway (Concrete barriers, transit lanes, steel gantry)
     this.createTileCanvas('road_lvl4', (ctx, w, h) => {
-      this.drawIsoDiamond(ctx, w, h, '#020617', '#000000', '#c084fc');
-      // Illuminated transit express lanes
+      this.draw32BitIsoDiamond(ctx, w, h, '#020617', '#000000', '#0f172a', '#c084fc');
+
+      // Cyan illuminated transit speed lanes
       ctx.fillStyle = '#06b6d4';
-      ctx.fillRect(w / 2 - 18, h / 2 - 5, 2, 10);
-      ctx.fillRect(w / 2 + 16, h / 2 - 5, 2, 10);
+      ctx.fillRect(w / 2 - 20, h / 2 - 6, 3, 12);
+      ctx.fillRect(w / 2 + 17, h / 2 - 6, 3, 12);
 
-      // Center divider barrier
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(w / 2 - 1, h / 2 - 7, 2, 14);
+      // Heavy Concrete Jersey Barrier in Center
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(w / 2 - 2, h / 2 - 8, 4, 16);
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(w / 2 - 1, h / 2 - 8, 2, 16);
 
-      // Overhead Gantry Signage
+      // Overhead Steel Highway Gantry Signage
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(w / 2 - 22, h / 2 - 20, 4, 18);
+      ctx.fillRect(w / 2 + 18, h / 2 - 20, 4, 18);
       ctx.fillStyle = '#334155';
-      ctx.fillRect(w / 2 - 18, h / 2 - 18, 36, 3);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillRect(w / 2 - 14, h / 2 - 17, 12, 2);
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(w / 2 + 2, h / 2 - 17, 12, 2);
+      ctx.fillRect(w / 2 - 22, h / 2 - 22, 44, 4);
+
+      // Digital Green/Blue Overhead Route Displays
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(w / 2 - 18, h / 2 - 21, 16, 2);
+      ctx.fillStyle = '#16a34a';
+      ctx.fillRect(w / 2 + 2, h / 2 - 21, 16, 2);
     });
   }
 
@@ -128,25 +207,38 @@ class TileAssets {
     return canvas;
   }
 
-  drawIsoDiamond(ctx, w, h, fillTop, fillLeft, strokeColor) {
+  // 32-Bit Beveled Isometric Diamond with Highlights and Depth Facets
+  draw32BitIsoDiamond(ctx, w, h, fillTop, fillLeft, fillRight, strokeHighlight) {
     const hw = w / 2;
     const hh = h / 2;
 
+    // Top Face
     ctx.beginPath();
     ctx.moveTo(hw, 0);
-    ctx.lineTo(w, hh);
-    ctx.lineTo(hw, h);
+    ctx.lineTo(w - 1, hh);
+    ctx.lineTo(hw, h - 1);
     ctx.lineTo(0, hh);
     ctx.closePath();
-
     ctx.fillStyle = fillTop;
     ctx.fill();
 
-    if (strokeColor) {
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+    // Northwest Specular Highlight (Light Source from top-left)
+    ctx.strokeStyle = strokeHighlight || 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, hh);
+    ctx.lineTo(hw, 0);
+    ctx.lineTo(w - 1, hh);
+    ctx.stroke();
+
+    // Southeast Depth Shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(w - 1, hh);
+    ctx.lineTo(hw, h - 1);
+    ctx.lineTo(0, hh);
+    ctx.stroke();
   }
 
   // Draw Road Tile based on Level (1 to 4)
@@ -160,11 +252,11 @@ class TileAssets {
     if (sprite) {
       ctx.drawImage(sprite, screenX - this.TILE_WIDTH / 2, screenY);
     } else {
-      this.drawIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#334155', '#0f172a', '#475569');
+      this.draw32BitIsoDiamond(ctx, this.TILE_WIDTH, this.TILE_HEIGHT, '#334155', '#1e293b', '#475569', '#64748b');
     }
   }
 
-  // Draw Maritime Port Hub (Container Terminal, Harbor Customs, or Drydock)
+  // Draw 32-Bit Maritime Port Hub (Terminal, Stacked Cargo Containers, Gantry Crane)
   drawMaritimePort(ctx, screenX, screenY, portBuilding) {
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
@@ -175,61 +267,71 @@ class TileAssets {
     ctx.translate(screenX - hw, screenY - hh);
 
     // Port concrete apron foundation
-    this.drawIsoDiamond(ctx, w, h, '#475569', '#1e293b', '#64748b');
+    this.draw32BitIsoDiamond(ctx, w, h, '#475569', '#334155', '#64748b', '#94a3b8');
 
-    // 1. Port Logistics Terminal Building (Left)
+    // 1. Port Logistics Terminal Brick Building (Left)
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(hw - 22, hh - 20, 18, 16);
+    // Brick texture & windows
+    ctx.fillStyle = '#bae6fd';
+    ctx.fillRect(hw - 20, hh - 18, 4, 4);
+    ctx.fillRect(hw - 12, hh - 18, 4, 4);
     ctx.fillStyle = '#0369a1';
-    ctx.fillRect(hw - 20, hh - 18, 16, 14);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(hw - 18, hh - 16, 4, 4);
-    ctx.fillRect(hw - 10, hh - 16, 4, 4);
+    ctx.fillRect(hw - 22, hh - 22, 18, 3); // Cornice
 
-    // 2. Stacked Cargo Shipping Containers
+    // 2. 32-Bit Stacked Cargo Shipping Containers with Corrugated Ribs
     // Blue Container
     ctx.fillStyle = '#2563eb';
-    ctx.fillRect(hw + 2, hh - 10, 14, 6);
+    ctx.fillRect(hw + 2, hh - 12, 16, 8);
     ctx.strokeStyle = '#1d4ed8';
-    ctx.strokeRect(hw + 2, hh - 10, 14, 6);
+    ctx.strokeRect(hw + 2, hh - 12, 16, 8);
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillRect(hw + 5, hh - 10, 2, 4);
+    ctx.fillRect(hw + 10, hh - 10, 2, 4);
 
-    // Orange Container (Stacked above)
+    // Orange Container (Stacked on top)
     ctx.fillStyle = '#ea580c';
-    ctx.fillRect(hw + 4, hh - 17, 12, 6);
+    ctx.fillRect(hw + 4, hh - 20, 14, 7);
     ctx.strokeStyle = '#c2410c';
-    ctx.strokeRect(hw + 4, hh - 17, 12, 6);
+    ctx.strokeRect(hw + 4, hh - 20, 14, 7);
+    ctx.fillStyle = '#fdba74';
+    ctx.fillRect(hw + 7, hh - 18, 2, 3);
 
     // Emerald Green Container
     ctx.fillStyle = '#059669';
-    ctx.fillRect(hw - 4, hh - 8, 12, 6);
+    ctx.fillRect(hw - 6, hh - 8, 12, 6);
+    ctx.strokeStyle = '#047857';
+    ctx.strokeRect(hw - 6, hh - 8, 12, 6);
 
-    // 3. Heavy Gantry Cargo Crane
-    ctx.strokeStyle = '#dc2626'; // Bright Red Gantry
+    // 3. 32-Bit Heavy Gantry Cargo Crane (Lattice Trusswork)
+    ctx.strokeStyle = '#dc2626'; // Red Crane Steel
     ctx.lineWidth = 2.0;
     ctx.beginPath();
-    // Crane A-frame legs
-    ctx.moveTo(hw - 10, hh + 2);
-    ctx.lineTo(hw - 2, hh - 28);
-    ctx.lineTo(hw + 6, hh + 2);
-    // Crane boom extending over water
-    ctx.moveTo(hw - 8, hh - 26);
-    ctx.lineTo(hw + 22, hh - 26);
+    ctx.moveTo(hw - 12, hh + 4);
+    ctx.lineTo(hw - 4, hh - 32);
+    ctx.lineTo(hw + 8, hh + 4);
+    ctx.moveTo(hw - 8, hh - 30);
+    ctx.lineTo(hw + 24, hh - 30); // Boom
     ctx.stroke();
 
-    // Crane Cable & Spreader Hook
-    ctx.strokeStyle = '#ffffff';
+    // Crane Cable & Winch
+    ctx.strokeStyle = '#f8fafc';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(hw + 14, hh - 26);
-    ctx.lineTo(hw + 14, hh - 12);
+    ctx.moveTo(hw + 16, hh - 30);
+    ctx.lineTo(hw + 16, hh - 14);
     ctx.stroke();
 
-    // Suspended Cargo Box
+    // Suspended Yellow Cargo Box
     ctx.fillStyle = '#facc15';
-    ctx.fillRect(hw + 10, hh - 12, 8, 5);
+    ctx.fillRect(hw + 12, hh - 14, 8, 6);
+    ctx.strokeStyle = '#ca8a04';
+    ctx.strokeRect(hw + 12, hh - 14, 8, 6);
 
     ctx.restore();
   }
 
-  // Draw Deep-Water Pier extending into the ocean with moored ship
+  // Draw 32-Bit Pier Dock extending into ocean with moored vessel
   drawPierDock(ctx, screenX, screenY, pierBuilding) {
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
@@ -239,7 +341,7 @@ class TileAssets {
     ctx.save();
     ctx.translate(screenX - hw, screenY - hh);
 
-    // Wooden/Concrete Pier Planks
+    // Wooden/Concrete Pier Planks with Nail Rivets
     ctx.fillStyle = '#78350f';
     ctx.beginPath();
     ctx.moveTo(hw, 4);
@@ -252,40 +354,42 @@ class TileAssets {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Pier plank lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    // Wood plank grooves
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.beginPath();
-    ctx.moveTo(hw - 10, hh - 2); ctx.lineTo(hw + 10, hh - 2);
-    ctx.moveTo(hw - 8, hh + 2); ctx.lineTo(hw + 8, hh + 2);
+    ctx.moveTo(hw - 12, hh - 3); ctx.lineTo(hw + 12, hh - 3);
+    ctx.moveTo(hw - 10, hh + 3); ctx.lineTo(hw + 10, hh + 3);
     ctx.stroke();
 
-    // Moored Cargo Vessel / Boat
-    ctx.fillStyle = '#1e293b'; // Ship Hull
+    // Moored Cargo Vessel / Tugboat
+    ctx.fillStyle = '#1e293b'; // Hull
     ctx.beginPath();
-    ctx.moveTo(hw + 8, hh - 8);
-    ctx.lineTo(hw + 24, hh - 2);
-    ctx.lineTo(hw + 18, hh + 6);
-    ctx.lineTo(hw + 4, hh);
+    ctx.moveTo(hw + 6, hh - 10);
+    ctx.lineTo(hw + 26, hh - 2);
+    ctx.lineTo(hw + 20, hh + 8);
+    ctx.lineTo(hw + 2, hh);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = '#475569';
     ctx.stroke();
 
-    // Ship Deckhouse & Smoke funnel
+    // Ship Cabin & Red Funnel with puff
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(hw + 10, hh - 12, 6, 6);
+    ctx.fillRect(hw + 8, hh - 14, 8, 6);
     ctx.fillStyle = '#dc2626';
-    ctx.fillRect(hw + 12, hh - 16, 2, 4);
+    ctx.fillRect(hw + 11, hh - 18, 3, 4);
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.7)';
+    ctx.fillRect(hw + 12, hh - 22, 2, 2);
 
     // Mooring Bollards
     ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(hw - 6, hh - 4, 2, 3);
-    ctx.fillRect(hw + 4, hh - 4, 2, 3);
+    ctx.fillRect(hw - 8, hh - 4, 3, 4);
+    ctx.fillRect(hw + 6, hh - 4, 3, 4);
 
     ctx.restore();
   }
 
-  // Draw Ground Building (Levels 1 to 3)
+  // Draw 32-Bit Retro Ground Building (Levels 1 to 3: Residential, Commercial, Industrial)
   drawGroundBuilding(ctx, screenX, screenY, building, ownerColor = '#3b82f6') {
     const type = building.type;
     if (type === 'ROAD') {
@@ -308,40 +412,74 @@ class TileAssets {
     ctx.save();
     ctx.translate(screenX - w / 2, screenY - h / 2);
 
-    const bHeight = level * 18 + 12;
+    const bHeight = level * 20 + 12;
     const hw = w / 2;
     const hh = h / 2;
 
-    let wallLeftColor = '#334155';
-    let wallRightColor = '#1e293b';
-    let roofColor = '#475569';
+    let wallLeftColor = '#94a3b8';
+    let wallRightColor = '#64748b';
+    let roofColor = '#e2e8f0';
     let windowColor = '#fef08a';
+    let trimColor = '#cbd5e1';
 
     if (type === 'RESIDENTIAL') {
-      roofColor = level === 1 ? '#e11d48' : (level === 2 ? '#0284c7' : '#059669');
-      wallLeftColor = '#94a3b8';
-      wallRightColor = '#64748b';
+      if (level === 1) {
+        // Red Clay Shingle Cottage
+        roofColor = '#dc2626';
+        wallLeftColor = '#cbd5e1';
+        wallRightColor = '#94a3b8';
+        trimColor = '#78350f';
+      } else if (level === 2) {
+        // Victorian Brick Townhouse
+        roofColor = '#0284c7';
+        wallLeftColor = '#b91c1c';
+        wallRightColor = '#7f1d1d';
+        trimColor = '#fef08a';
+      } else {
+        // Art-Deco Emerald High-Rise
+        roofColor = '#059669';
+        wallLeftColor = '#047857';
+        wallRightColor = '#064e3b';
+        trimColor = '#a7f3d0';
+      }
     } else if (type === 'COMMERCIAL') {
-      roofColor = '#3b82f6';
-      wallLeftColor = '#0284c7';
-      wallRightColor = '#0369a1';
-      windowColor = '#67e8f9';
+      if (level === 1) {
+        // Neighborhood Bodega / Store with Awning
+        roofColor = '#2563eb';
+        wallLeftColor = '#38bdf8';
+        wallRightColor = '#0284c7';
+        windowColor = '#e0f2fe';
+      } else if (level === 2) {
+        // Mid-Rise Corporate Glass Plaza
+        roofColor = '#1d4ed8';
+        wallLeftColor = '#0369a1';
+        wallRightColor = '#0c4a6e';
+        windowColor = '#67e8f9';
+      } else {
+        // Financial Skyscraper Tower
+        roofColor = '#1e1b4b';
+        wallLeftColor = '#312e81';
+        wallRightColor = '#1e1b4b';
+        windowColor = '#a5f3fc';
+      }
     } else if (type === 'INDUSTRIAL') {
-      roofColor = '#d97706';
+      // Brick Foundry & Metal Warehouse
+      roofColor = '#b45309';
       wallLeftColor = '#78350f';
       wallRightColor = '#451a03';
       windowColor = '#f59e0b';
+      trimColor = '#ea580c';
     } else if (type === 'CIVIC' || type === 'PARK') {
       roofColor = '#10b981';
-      wallLeftColor = '#047857';
-      wallRightColor = '#065f46';
+      wallLeftColor = '#059669';
+      wallRightColor = '#047857';
     } else if (type === 'RUINS') {
       roofColor = '#450a0a';
-      wallLeftColor = '#1c1917';
-      wallRightColor = '#0c0a09';
+      wallLeftColor = '#292524';
+      wallRightColor = '#1c1917';
     }
 
-    // Left Wall
+    // 1. Left Wall (Beveled 32-bit light facet)
     ctx.beginPath();
     ctx.moveTo(0, hh);
     ctx.lineTo(hw, h);
@@ -350,10 +488,11 @@ class TileAssets {
     ctx.closePath();
     ctx.fillStyle = wallLeftColor;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Right Wall
+    // 2. Right Wall (Darker shade facet)
     ctx.beginPath();
     ctx.moveTo(hw, h);
     ctx.lineTo(w, hh);
@@ -362,10 +501,11 @@ class TileAssets {
     ctx.closePath();
     ctx.fillStyle = wallRightColor;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Roof Top
+    // 3. Roof Top (Highlight facet)
     ctx.beginPath();
     ctx.moveTo(hw, 0 - bHeight);
     ctx.lineTo(w, hh - bHeight);
@@ -374,43 +514,88 @@ class TileAssets {
     ctx.closePath();
     ctx.fillStyle = roofColor;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Building windows
+    // 4. 32-Bit Architectural Details & Windows
     if (type !== 'RUINS' && level > 0) {
       ctx.fillStyle = windowColor;
       for (let f = 1; f <= level; f++) {
-        const floorY = h - (f * 14);
-        ctx.fillRect(hw - 18, floorY - 4, 4, 4);
-        ctx.fillRect(hw - 8, floorY - 1, 4, 4);
-        ctx.fillRect(hw + 4, floorY - 1, 4, 4);
-        ctx.fillRect(hw + 14, floorY - 4, 4, 4);
+        const floorY = h - (f * 16);
+        // Left wall windows
+        ctx.fillRect(hw - 20, floorY - 6, 5, 5);
+        ctx.fillRect(hw - 10, floorY - 3, 5, 5);
+        // Right wall windows
+        ctx.fillRect(hw + 5, floorY - 3, 5, 5);
+        ctx.fillRect(hw + 15, floorY - 6, 5, 5);
+
+        // Window frames
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.strokeRect(hw - 20, floorY - 6, 5, 5);
+        ctx.strokeRect(hw - 10, floorY - 3, 5, 5);
+        ctx.strokeRect(hw + 5, floorY - 3, 5, 5);
+        ctx.strokeRect(hw + 15, floorY - 6, 5, 5);
+      }
+
+      // Level 1 Commercial: Striped Storefront Awning
+      if (type === 'COMMERCIAL' && level === 1) {
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(hw - 18, h - 10, 16, 4);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(hw - 14, h - 10, 4, 4);
+        ctx.fillRect(hw - 6, h - 10, 4, 4);
+      }
+
+      // Residential Level 1: Red Chimney with gentle smoke
+      if (type === 'RESIDENTIAL' && level === 1) {
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fillRect(hw - 12, -bHeight - 6, 4, 8);
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.6)';
+        ctx.fillRect(hw - 11, -bHeight - 10, 2, 3);
+      }
+
+      // High-Rise Rooftop Water Tower & Antenna
+      if (level >= 3) {
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(hw - 8, -bHeight - 8, 8, 8); // Water tank
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(hw + 4, -bHeight - 14, 2, 14); // Radio Mast
+        ctx.fillStyle = '#ef4444'; // Red flashing beacon
+        ctx.fillRect(hw + 3, -bHeight - 16, 4, 2);
       }
     }
 
-    // Owner color badge
+    // Owner Skyline Badge on Cornice
     ctx.fillStyle = ownerColor;
-    ctx.fillRect(hw - 4, hh - bHeight - 3, 8, 4);
+    ctx.fillRect(hw - 6, hh - bHeight - 4, 12, 4);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(hw - 6, hh - bHeight - 4, 12, 4);
 
-    // Industrial Smokestack
+    // Industrial Smokestack with animated billowing pixel smoke
     if (type === 'INDUSTRIAL') {
-      ctx.fillStyle = '#52525b';
-      ctx.fillRect(hw - 10, -bHeight - 12, 6, 12);
-      ctx.fillStyle = 'rgba(120, 113, 108, 0.6)';
-      ctx.beginPath();
-      ctx.arc(hw - 7, -bHeight - 16, 6 + Math.sin(Date.now() * 0.005) * 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = '#44403c';
+      ctx.fillRect(hw - 12, -bHeight - 14, 8, 14);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(hw - 12, -bHeight - 14, 8, 2); // Red hazard band
+
+      // Animated Smoke Puffs
+      const smokeOffset = (Date.now() * 0.003) % 8;
+      ctx.fillStyle = 'rgba(214, 211, 209, 0.7)';
+      ctx.fillRect(hw - 10, -bHeight - 18 - smokeOffset, 6, 4);
+      ctx.fillStyle = 'rgba(168, 162, 158, 0.5)';
+      ctx.fillRect(hw - 8, -bHeight - 24 - smokeOffset * 1.5, 8, 6);
     }
 
-    // Strike indicator
+    // Strike Indicator
     if (building.isUnderStrike) {
       ctx.fillStyle = '#dc2626';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('⚠️ STRIKE', hw - 24, -bHeight - 6);
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('⚠️ STRIKE', hw - 22, -bHeight - 6);
     }
 
-    // Tax Abatement badge
+    // Tax Abatement Badge
     if (building.taxAbatedUntil > 0) {
       ctx.fillStyle = '#10b981';
       ctx.beginPath();
@@ -421,7 +606,7 @@ class TileAssets {
     ctx.restore();
   }
 
-  // Draw Ground Shadow for floating structures
+  // Draw Ground Shadow
   drawAntigravityShadow(ctx, screenX, groundScreenY, z_offset) {
     const w = this.TILE_WIDTH;
     const h = this.TILE_HEIGHT;
@@ -435,15 +620,15 @@ class TileAssets {
 
     ctx.beginPath();
     ctx.ellipse(0, 0, w * 0.45, h * 0.45, 0, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(15, 23, 42, ${alpha.toFixed(2)})`;
+    ctx.fillStyle = `rgba(0, 0, 0, ${alpha.toFixed(2)})`;
     ctx.fill();
     ctx.restore();
   }
 
-  // Draw Level 4 Floating Arcology
   drawFloatingArcology(ctx, screenX, screenY, arcology, ownerColor = '#3b82f6') {
-    // Preserved for future Sky City reactivation
+    // Preserved for future sky city reactivation
   }
 }
 
 window.TileAssets = TileAssets;
+

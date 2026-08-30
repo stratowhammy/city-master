@@ -291,16 +291,41 @@ function handleClientMessage(client, msg) {
     case 'BUY_LAND': {
       const { x, y } = payload;
       const tile = gameState.grid[x] && gameState.grid[x][y];
-      if (tile && !tile.ownerId && !tile.isWater && firm.cash >= tile.landValue) {
-        firm.cash -= tile.landValue;
-        tile.ownerId = firm.id;
-        firm.totalLand = (firm.totalLand || 0) + 1;
-        gameState.checkAndActivateTrading(firm.id);
-        gameState.updateRoadNetwork();
-        gameState.markTileDirty(x, y);
-        gameState.markFirmDirty(firm.id);
-        sendToClient(client, 'ACTION_SUCCESS', { message: `Acquired land at (${x}, ${y}) for $${tile.landValue.toLocaleString()}` });
+      if (!tile || tile.isWater) {
+        sendToClient(client, 'ACTION_ERROR', { message: 'Cannot purchase water parcels!' });
+        break;
       }
+      if (tile.ownerId) {
+        sendToClient(client, 'ACTION_ERROR', { message: 'This parcel is already owned!' });
+        break;
+      }
+
+      // Check adjacency to an already owned parcel or port
+      const isAdjacentToOwned = [
+        { x: x + 1, y }, { x: x - 1, y },
+        { x, y: y + 1 }, { x, y: y - 1 },
+        { x: x + 1, y: y + 1 }, { x: x - 1, y: y - 1 },
+        { x: x + 1, y: y - 1 }, { x: x - 1, y: y + 1 }
+      ].some(n => n.x >= 0 && n.x < gameState.gridSize && n.y >= 0 && n.y < gameState.gridSize && gameState.grid[n.x] && gameState.grid[n.x][n.y] && (gameState.grid[n.x][n.y].ownerId || (gameState.grid[n.x][n.y].groundBuilding && (gameState.grid[n.x][n.y].groundBuilding.type === 'PORT' || gameState.grid[n.x][n.y].groundBuilding.type === 'PIER'))));
+
+      if (!isAdjacentToOwned) {
+        sendToClient(client, 'ACTION_ERROR', { message: 'Can only purchase land directly adjacent to already owned land!' });
+        break;
+      }
+
+      if (firm.cash < tile.landValue) {
+        sendToClient(client, 'ACTION_ERROR', { message: `Insufficient cash ($${tile.landValue.toLocaleString()} required)` });
+        break;
+      }
+
+      firm.cash -= tile.landValue;
+      tile.ownerId = firm.id;
+      firm.totalLand = (firm.totalLand || 0) + 1;
+      gameState.checkAndActivateTrading(firm.id);
+      gameState.updateRoadNetwork();
+      gameState.markTileDirty(x, y);
+      gameState.markFirmDirty(firm.id);
+      sendToClient(client, 'ACTION_SUCCESS', { message: `Acquired land at (${x}, ${y}) for $${tile.landValue.toLocaleString()}` });
       break;
     }
 

@@ -223,4 +223,27 @@ assert.strictEqual(state.firms.size, 11, 'Exchange must now list 11 total firms'
 assert.strictEqual(registeredFirm.isActivelyTraded, false, 'New user profile firm must start with isActivelyTraded: false');
 console.log('✅ Subsystem 9C: Dynamic Profile Registration & Development-Gated Active Trading Passed');
 
-console.log('\n🎉 ALL SUBSYSTEMS PASSED TEST VERIFICATION SUCCESSFULLY!');
+// 10. 32-Bit Retro Organic Black Void Frontier & Strict Adjacent-Only Land Acquisition
+// Verify that distant unowned land cannot be for sale / is in the void
+const distantTile = state.grid[0][0];
+assert.strictEqual(distantTile.perimeterForSale, false, 'Distant tile (0,0) away from any owned parcel must NOT be for sale (void)');
+
+// Verify that immediate adjacent neighbor to an owned parcel is for sale
+// State starting port cluster has frontier lot at (11, 41)
+const adjacentFrontierTile = state.grid[11][41];
+assert.strictEqual(adjacentFrontierTile.perimeterForSale, true, 'Frontier tile adjacent to cluster (11,41) must be perimeterForSale: true');
+
+// Verify that tile (10, 40) beyond the frontier is NOT yet for sale
+assert.strictEqual(state.grid[10][40].perimeterForSale, false, 'Tile (10,40) beyond frontier must NOT be for sale yet');
+
+// Simulate purchasing the frontier parcel (11, 41)
+adjacentFrontierTile.ownerId = 'firm_player_1';
+state.updateRoadNetwork();
+
+// Now tile (10, 40) becomes an immediate neighbor to owned land and is organically unlocked for sale!
+const nextFrontierTile = state.grid[10][40];
+assert.strictEqual(nextFrontierTile.perimeterForSale, true, 'Next frontier tile (10,40) must organically become for sale after adjacent purchase');
+console.log('✅ Subsystem 10: Organic Black Void Expansion & Adjacent-Only Land Acquisition Passed');
+
+console.log('\n🎉 ALL 14 SUBSYSTEMS PASSED TEST VERIFICATION SUCCESSFULLY!');
+
